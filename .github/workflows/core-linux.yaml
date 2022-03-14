@@ -76,5 +76,4 @@ jobs:
               -DCMAKE_BINARY_DIR=`pwd` \
               `pwd`/../hqrrp
           make
-          ./simple_test
           ctest
