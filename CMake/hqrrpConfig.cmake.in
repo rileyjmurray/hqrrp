@@ -6,13 +6,13 @@ if (NOT blaspp_DIR)
     set(blaspp_DIR @blaspp_DIR@)
 endif ()
 find_dependency(blaspp)
-include(HQRRP_blaspp)
+include(hqrrp_blaspp)
 
 # LAPACK++
 if (NOT lapackpp_DIR)
     set(lapackpp_DIR @lapackpp_DIR@)
 endif ()
 find_dependency(lapackpp)
-include(HQRRP_lapackpp)
+include(hqrrp_lapackpp)
 
 include(hqrrp)

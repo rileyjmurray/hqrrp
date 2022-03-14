@@ -66,13 +66,13 @@ jobs:
       - name: build HQRRP
         run: |
           cd ..
-          mkdir HQRRP-build
-          cd HQRRP-build
+          mkdir hqrrp-build
+          cd hqrrp-build
           cmake -DCMAKE_BUILD_TYPE=Debug \
               -Dblaspp_DIR=`pwd`/../blaspp-install/lib/blaspp \
               -Dlapackpp_DIR=`pwd`/../lapackpp-install/lib/lapackpp \
               -DRandom123_DIR=`pwd`/../Random123-install/include \
-              -DCMAKE_INSTALL_PREFIX=`pwd`/../HQRRP-install \
+              -DCMAKE_INSTALL_PREFIX=`pwd`/../hqrrp-install \
               -DCMAKE_BINARY_DIR=`pwd` \
               `pwd`/../hqrrp
           make

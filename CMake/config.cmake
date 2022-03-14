@@ -1,6 +1,6 @@
-configure_file(CMake/HQRRPConfig.cmake.in
-    ${CMAKE_INSTALL_LIBDIR}/cmake/HQRRPConfig.cmake @ONLY)
+configure_file(CMake/hqrrpConfig.cmake.in
+    ${CMAKE_INSTALL_LIBDIR}/cmake/hqrrpConfig.cmake @ONLY)
 
 install(FILES
-    ${CMAKE_BINARY_DIR}/${CMAKE_INSTALL_LIBDIR}/cmake/HQRRPConfig.cmake
+    ${CMAKE_BINARY_DIR}/${CMAKE_INSTALL_LIBDIR}/cmake/hqrrpConfig.cmake
     DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake)
