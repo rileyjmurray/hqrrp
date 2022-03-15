@@ -1,5 +1,16 @@
 # HQRRP
 
+The code in this repository has been modified from its original implementation.
+Changes are as follows:
+ * Use a CMake build system rather than a plan Makefile.
+ * Use BLAS++ and LAPACK++ to interface to BLAS and LAPACK libraries.
+ * Write correctness tests (using GoogleTest).
+ * Setup continuous integration with GitHub Actions.
+ * Provide a separate CMake project in the "benchmark" folder, for benchmarking performance
+   of the algorithm as implemented in the main library.
+
+The readme for the original repository appears below.
+
 ## Authors
 
 * Per-Gunnar Martinsson,
