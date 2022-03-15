@@ -3,7 +3,7 @@
 #include <util.h>
 #include <math.h>
 
-#define RELDTOL 1e-10;
+#define RELDTOL 1e-8;
 #define ABSDTOL 1e-12;
 
 
@@ -38,7 +38,7 @@ void expand_pqr(
     lapack::lacpy(
         lapack::MatrixType::Upper,
         mn_A, n_A, A, ldim_A,
-        R, n_A
+        R, mn_A
     );
     if (verbose) HQRRP::print_double_matrix("R\0", mn_A, n_A, R, mn_A);
 
@@ -63,7 +63,7 @@ void expand_pqr(
         blas::copy(m_A, & temp_A[ i* ldim_A] , 1, 
                         & A[ col_idx * ldim_A], 1);
     }
-    if (verbose) HQRRP::print_int_vector("p", n_A, p);
+    if (verbose) HQRRP::print_int_vector("p\0", n_A, p);
 
     free(temp_A);
     free(R);
@@ -90,11 +90,7 @@ void test_qrcp(int64_t m_A, int64_t n_A, uint64_t a_seed, bool randalg, bool ver
     
     if (randalg)
     {
-        int64_t lwork = max( 1, 128 * n_A );
-        double *buff_wk_qp4 = ( double * ) malloc( lwork * sizeof( double ) );
-        HQRRP::dgeqp4( & m_A, & n_A, buff_A, & ldim_A, buff_p, buff_tau, 
-                        buff_wk_qp4, & lwork, & info );
-        if (info != 0) throw blas::Error();
+        HQRRP::dgeqp4(m_A, n_A, buff_A, ldim_A, buff_p, buff_tau);
     }
     else
     {
@@ -121,11 +117,12 @@ void test_qrcp(int64_t m_A, int64_t n_A, uint64_t a_seed, bool randalg, bool ver
         }    
     }
 
-    free(buff_A);
+    //free(buff_A);
+    delete[] buff_A;
+    delete[] buff_A_copy;
     free(buff_Q);
     free(buff_p);
     free(buff_tau);
-    free(buff_A_copy);
 }
 
 class TestExpandQRCP : public ::testing::Test 
@@ -159,6 +156,13 @@ TEST_F(TestExpandQRCP, Dim10by10)
     run(10, 10, 101);
 }
 
+TEST_F(TestExpandQRCP, Dim10by100)
+{
+    run(10, 100, 99);
+    run(10, 100, 100);
+    run(10, 100, 101);
+}
+
 
 
 class TestHQRRP : public ::testing::Test
@@ -178,6 +182,13 @@ TEST_F(TestHQRRP, Dim10by3)
    run(10, 3, 101);
 }
 
+TEST_F(TestHQRRP, Dim3by10) 
+{
+   run(3, 10, 99);
+   run(3, 10, 100);
+   run(3, 10, 101);
+}
+
 TEST_F(TestHQRRP, Dim10by10)
 {
     run(10, 10, 99);
@@ -190,4 +201,11 @@ TEST_F(TestHQRRP, Dim300by100)
     run(300, 100, 99);
     run(300, 100, 100);
     run(300, 100, 101);
+}
+
+TEST_F(TestHQRRP, Dim100by300)
+{
+    run(100, 300, 99);
+    run(100, 300, 100);
+    run(100, 300, 101);
 }

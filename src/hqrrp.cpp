@@ -330,6 +330,27 @@ void dgeqp4( int64_t * m, int64_t * n, double * A, int64_t * lda, int64_t * jpvt
 }
 
 
+void dgeqp4(int64_t m, int64_t n, double *A, int64_t lda, int64_t *jpvt, double *tau)
+{
+  int64_t info = 0;
+  int64_t lwork = -1;
+  double *buff_wk_qp4 = (double *) malloc( sizeof( double ) );
+  dgeqp4( & m, & n, A, & lda, jpvt, tau, 
+          buff_wk_qp4, & lwork, &info );
+  if (info != 0) throw lapack::Error();
+
+  lwork = (int64_t) *buff_wk_qp4;
+  free(buff_wk_qp4);
+  buff_wk_qp4 = ( double * ) malloc( lwork * sizeof( double ) );
+  dgeqp4( & m, & n, A, & lda, jpvt, tau, 
+          buff_wk_qp4, & lwork, &info );
+  if (info != 0) throw lapack::Error();
+  
+  free(buff_wk_qp4);
+  return;
+}
+
+
 // ============================================================================
 int64_t NoFLA_HQRRP_WY_blk_var4( int64_t m_A, int64_t n_A, double * buff_A, int64_t ldim_A,
         int64_t * buff_jpvt, double * buff_tau,
