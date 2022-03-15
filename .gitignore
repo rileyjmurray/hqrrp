@@ -1,3 +1,5 @@
+.vscode/*
+
 *.o
 *.so
 *.a
@@ -7,10 +9,12 @@ blaspp/*
 blaspp-build/*
 blaspp-install/*
 
-HQRRP-build/*
+hqrrp-build/*
+hqrrp-install/*
 
 lapackpp/
 lapackpp/*
 lapackpp-build/*
 lapackpp-install/*
 
+benchmark/build/*

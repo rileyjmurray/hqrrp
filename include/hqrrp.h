@@ -1,6 +1,5 @@
 #ifndef LAPACK_HH
 #include <lapack.hh>
-#include <lapack/fortran.h>
 #include <lapack/config.h>
 #define LAPACK_HH
 #endif
