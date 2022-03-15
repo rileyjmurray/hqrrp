@@ -128,17 +128,25 @@ void dgeqp4( int64_t * m, int64_t * n, double * A, int64_t * lda, int64_t * jpvt
 // 
 // This routine is plug compatible with LAPACK's routine dgeqp3.
 // It computes the new HQRRP while keeping the same header as LAPACK's dgeqp3.
-// It uses dgeqpf or dgeqp3 for small matrices. The thresholds are defined in
-// constants THRESHOLD_FOR_DGEQPF and THRESHOLD_FOR_DGEQP3.
+// It uses dgeqp3 for small matrices. The threshold is defined in the
+// constant THRESHOLD_FOR_DGEQP3.
 //
+// The work parameters (work and lwork) are only used when this routine calls
+//    LAPACK_dgeqp3 (for sufficiently small matrices), and
+//    LAPACK_dgeqrf and LAPACK_dormqr (when jpvt specifies fixed cols on entry).
+// The work parameters do not affect the main randomized algorithm, which is
+// implemented by NoFLA_HQRRP_WY_blk_var4.
+//
+// In particular, the work parameters do not effect algorithm performance when
+// no fixed columns are specified and the smaller dimension of the input matrix
+// is larger than THRESHOLD_FOR_DGEQP3. 
+//   
   int64_t     INB = 1;
   int64_t     i_one = 1, i_minus_one = -1, 
           m_A, n_A, mn_A, ldim_A, lquery, nb, num_factorized_fixed_cols, 
           minus_info, iws, lwkopt, j, k, num_fixed_cols, n_rest, itmp;
   int64_t     * previous_jpvt;
 
-  //typedef lapack::int64_t int64_t;
-  //using lapack::int64_t;
   using blas::real;
 
   // Some initializations.
@@ -332,6 +340,8 @@ void dgeqp4( int64_t * m, int64_t * n, double * A, int64_t * lda, int64_t * jpvt
 
 void dgeqp4(int64_t m, int64_t n, double *A, int64_t lda, int64_t *jpvt, double *tau)
 {
+  // This function is compatible with LAPACK++'s geqp3, provided the matrix A is 
+  // double precision.
   int64_t info = 0;
   int64_t lwork = -1;
   double *buff_wk_qp4 = (double *) malloc( sizeof( double ) );
