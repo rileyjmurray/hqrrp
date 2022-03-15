@@ -1,6 +1,6 @@
 #include <blas.hh>
 #include <hqrrp.h>
-#include <mkl.h>
+// #include <mkl.h> // uncomment if you want to call MKL directly for some reason.
 
 #include <stdio.h>
 #include <unistd.h>

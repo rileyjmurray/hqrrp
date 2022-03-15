@@ -18,7 +18,7 @@ find_package(lapackpp REQUIRED)
 message(STATUS "Done looking for LAPACK++.")
 
 message(STATUS "Looking for MKL ...")
-find_package(MKL CONFIG REQUIRED)
+find_package(MKL CONFIG)
 message(STATUS "${MKL_IMPORTED_TARGETS}") 
 message(STATUS "Done looking for MKL.")
 
