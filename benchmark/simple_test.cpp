@@ -3,21 +3,18 @@
 #include <stdio.h>
 #include <blas.hh>
 #include <hqrrp.h>
+#include <mkl.h>
+
 
 #define max( a, b ) ( (a) > (b) ? (a) : (b) )
 #define min( a, b ) ( (a) < (b) ? (a) : (b) )
 
-#define int64_t lapack_int
-
-// #define PRINT_DATA
+// #define int64_t lapack_int
+// ^ Might be needed if LAPACK++ is linked against a library in the LP64 model (as opposed to ILP64)
 
 
 // ============================================================================
 // Declaration of local prototypes.
-
-static void matrix_generate( int64_t m_A, int64_t n_A, double * buff_A, int64_t ldim_A );
-
-static void init_pvt( int64_t n, int64_t * vector );
 
 static void set_pvt_to_zero( int64_t n_p, int64_t * buff_p );
 
@@ -46,25 +43,10 @@ int main( int argc, char *argv[] ) {
   ldim_Q   = max( 1, m_A );
 
   // Generate matrix.
-  matrix_generate( m_A, n_A, buff_A, ldim_A );
-
-#ifdef PRINT_DATA
-  print_double_matrix( "ai", m_A, n_A, buff_A, ldim_A );
-  print_double_vector( "taui", n_A, buff_tau );
-#endif
+  genmat(m_A, n_A, buff_A, (uint64_t) 0);
 
   // Initialize vector with pivots.
   set_pvt_to_zero( n_A, buff_p );
-  buff_p[ 0 ] = 0;
-  buff_p[ 1 ] = 1;
-  buff_p[ 2 ] = 1;
-  buff_p[ 3 ] = 0;
-  buff_p[ 4 ] = 1;
-#ifdef PRINT_DATA
-  print_int_vector( "pi", n_A, buff_p );
-#endif
-
-  // Create workspace.
   lwork       = max( 1, 128 * n_A );
   buff_wk_qp4 = ( double * ) malloc( lwork * sizeof( double ) );
 
@@ -84,30 +66,6 @@ int main( int argc, char *argv[] ) {
   // Remove workspace.
   free( buff_wk_qp4 );
 
-  // Build matrix Q.
-  lwork     = max( 1, 128 * n_A );
-  buff_wk_orgqr = ( double * ) malloc( lwork * sizeof( double ) );
-  char matrixtype_ = matrixtype2char( lapack::MatrixType::General );
-  LAPACK_dlacpy( &matrixtype_, & m_A, & mn_A, buff_A, & ldim_A, buff_Q, & ldim_Q
-                 #ifdef LAPACK_FORTRAN_STRLEN_END
-                 , 1
-                 #endif
-   );
-  LAPACK_dorgqr( & m_A, & mn_A, & mn_A, buff_Q, & ldim_Q, buff_tau,
-           buff_wk_orgqr, & lwork, & info );
-  if( info != 0 ) {
-    fprintf( stderr, "Error in dorgqr: Info: %d\n", (int) info );
-  }
-  free( buff_wk_orgqr );
-
-  // Print results.
-#ifdef PRINT_DATA
-  print_double_matrix( "af", m_A, n_A, buff_A, ldim_A );
-  print_int_vector( "pf", n_A, buff_p );
-  print_double_vector( "tauf", n_A, buff_tau );
-  print_double_matrix( "qf", m_A, mn_A, buff_Q, ldim_Q );
-#endif
-
   // Free matrices and vectors.
   free( buff_A );
   free( buff_p );
@@ -119,53 +77,6 @@ int main( int argc, char *argv[] ) {
   return 0;
 }
 
-// ============================================================================
-static void matrix_generate( int64_t m_A, int64_t n_A, double * buff_A, int64_t ldim_A ) {
-  int64_t  i, j, num;
-
-  //
-  // Matrix with integer values.
-  // ---------------------------
-  //
-  if( ( m_A > 0 )&&( n_A > 0 ) ) {
-    num = 1;
-    for ( j = 0; j < n_A; j++ ) {
-      for ( i = ( j % m_A ); i < m_A; i++ ) {
-        buff_A[ i + j * ldim_A ] = ( double ) num;
-        num++;
-      }
-      for ( i = 0; i < ( j % m_A ); i++ ) {
-        buff_A[ i + j * ldim_A ] = ( double ) num;
-        num++;
-      }
-    }
-    if( ( m_A > 0 )&&( n_A > 0 ) ) {
-      buff_A[ 0 + 0 * ldim_A ] = 1.2;
-    }
-#if 0
-    // Scale down matrix.
-    if( num == 0.0 ) {
-      rnum = 1.0;
-    } else {
-      rnum = 1.0 / num;
-    }
-    for ( j = 0; j < n_A; j++ ) {
-      for ( i = 0; i < m_A; i++ ) {
-        buff_A[ i + j * ldim_A ] *= rnum;
-      }
-    }
-#endif
-  }
-}
-
-// ============================================================================
-static void init_pvt( int64_t n_p, int64_t * buff_p ) {
-  int64_t  i;
-
-  for( i = 0; i < n_p; i++ ) {
-    buff_p[ i ] = ( i + 1 );
-  }
-}
 
 // ============================================================================
 static void set_pvt_to_zero( int64_t n_p, int64_t * buff_p ) {

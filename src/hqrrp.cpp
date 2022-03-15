@@ -47,6 +47,7 @@ WITHOUT ANY WARRANTY EXPRESSED OR IMPLIED.
 #include <math.h>
 #include <blas.hh>
 #include "hqrrp.h"
+#include <lapack/fortran.h>
 
 
 namespace HQRRP {
