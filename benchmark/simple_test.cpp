@@ -36,8 +36,8 @@ static void set_pvt_to_zero( int64_t n_p, int64_t * buff_p );
 int main( int argc, char *argv[] ) {
   using namespace HQRRP;
   
-  int64_t     nb_alg, pp, m_A, n_A, ldim_A, info, lwork;
-  double  * buff_A, * buff_tau, * buff_wk_qp4;
+  int64_t     nb_alg, pp, m_A, n_A, ldim_A;
+  double  * buff_A, * buff_tau;
   int64_t     * buff_p;
 
   // Create matrix A, vector p, vector s, and matrix Q.
@@ -52,21 +52,10 @@ int main( int argc, char *argv[] ) {
   // Populate the test matrix and run the randomized algorithm.
   genmat(m_A, n_A, buff_A, (uint64_t) 0);
   set_pvt_to_zero( n_A, buff_p );
-  printf( "%% Just before computing factorization.\n" );
   t1 = high_resolution_clock::now();
-  lwork = -1;
-  dgeqp4( & m_A, & n_A, buff_A, & ldim_A, buff_p, buff_tau, 
-          buff_wk_qp4, & lwork, & info );
-  lwork = (int64_t) *buff_wk_qp4;
-  buff_wk_qp4 = ( double * ) malloc( lwork * sizeof( double ) );
-  dgeqp4( & m_A, & n_A, buff_A, & ldim_A, buff_p, buff_tau, 
-          buff_wk_qp4, & lwork, & info );
+  dgeqp4(m_A, n_A, buff_A, ldim_A, buff_p, buff_tau);
   t2 = high_resolution_clock::now();
-  printf( "%% Just after computing factorization.\n" );
-  printf( "%% Info after factorization:      %d \n", info );
-  printf( "%% Work[ 0 ] after factorization: %d \n", ( int64_t ) buff_wk_qp4[ 0 ] );
   std::cout << duration_cast<milliseconds>(t2 - t1).count() << "ms for HQRRP\n";
-  free( buff_wk_qp4 );
 
   // **RE**populate the test matrix and call MKL
   genmat(m_A, n_A, buff_A, (uint64_t) 0);
