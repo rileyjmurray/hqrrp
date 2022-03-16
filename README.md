@@ -18,7 +18,7 @@ The readme for the original repository appears below.
   University of Colorado at Boulder,
   526 UCB, Boulder, CO 80309-0526, USA.
 
-* Gregorio Quintana-Orti,
+* Gregorio Quintana-Ortí,
   Depto. de Ingenieria y Ciencia de Computadores,
   Universitat Jaume I,
   12.071 Castellon, Spain.
@@ -65,7 +65,7 @@ matrix-matrix multiplication.
 
 For example, we describe such an algorithm in our recent paper:
 
-  * P.-G. Martinsson, G. Quintana-Orti, N. Heavner, R. van de Geijn.
+  * P.-G. Martinsson, G. Quintana-Ortí, N. Heavner, R. van de Geijn.
     "Householder QR Factorization: Adding Randomization for Column Pivoting.
     FLAME Working Note #78" 
     http://arxiv.org/abs/1512.02671

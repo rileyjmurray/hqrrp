@@ -8,7 +8,7 @@ Per-Gunnar Martinsson
   University of Colorado at Boulder, 
   526 UCB, Boulder, CO 80309-0526, USA
 
-Gregorio Quint64_tana-Orti
+Gregorio Quint64_tana-Ortí
   Depto. de Ingenieria y Ciencia de Computadores, 
   Universitat Jaume I, 
   12.071 Castellon, Spain
