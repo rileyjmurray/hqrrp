@@ -135,7 +135,7 @@ void dgeqp4( int64_t * m, int64_t * n, double * A, int64_t * lda, int64_t * jpvt
 //    LAPACK_dgeqp3 (for sufficiently small matrices), and
 //    LAPACK_dgeqrf and LAPACK_dormqr (when jpvt specifies fixed cols on entry).
 // The work parameters do not affect the main randomized algorithm, which is
-// implemented by NoFLA_HQRRP_WY_blk_var4.
+// implemented by hqrrp.
 //
 // In particular, the work parameters do not effect algorithm performance when
 // no fixed columns are specified and the smaller dimension of the input matrix
@@ -293,7 +293,7 @@ void dgeqp4( int64_t * m, int64_t * n, double * A, int64_t * lda, int64_t * jpvt
   // Factorize free columns at the bottom with default values:
   // nb_alg = 64, pp = 10, panel_pivoting = 1.
   if( num_factorized_fixed_cols < mn_A ) {
-    * info = NoFLA_HQRRP_WY_blk_var4( 
+    * info = hqrrp( 
         m_A - num_factorized_fixed_cols, n_A - num_factorized_fixed_cols, 
         & A[ num_factorized_fixed_cols + num_factorized_fixed_cols * ldim_A ], 
             ldim_A,
@@ -362,7 +362,7 @@ void dgeqp4(int64_t m, int64_t n, double *A, int64_t lda, int64_t *jpvt, double 
 
 
 // ============================================================================
-int64_t NoFLA_HQRRP_WY_blk_var4( int64_t m_A, int64_t n_A, double * buff_A, int64_t ldim_A,
+int64_t hqrrp( int64_t m_A, int64_t n_A, double * buff_A, int64_t ldim_A,
         int64_t * buff_jpvt, double * buff_tau,
         int64_t nb_alg, int64_t pp, int64_t panel_pivoting ) {
 //
@@ -414,18 +414,18 @@ int64_t NoFLA_HQRRP_WY_blk_var4( int64_t m_A, int64_t n_A, double * buff_A, int6
   double  d_one  = 1.0;
 
   // Executable Statements.
-  //// printf( "%% NoFLA_HQRRP_WY_blk_var4.\n" );
+  //// printf( "%% hqrrp.\n" );
 
   // Check arguments.
   if( m_A < 0 ) {
     fprintf( stderr, 
-             "ERROR in NoFLA_HQRRP_WY_blk_var4: m_A is < 0.\n" );
+             "ERROR in hqrrp: m_A is < 0.\n" );
   } if( n_A < 0 ) {
     fprintf( stderr, 
-             "ERROR in NoFLA_HQRRP_WY_blk_var4: n_A is < 0.\n" );
+             "ERROR in hqrrp: n_A is < 0.\n" );
   } if( ldim_A < max( 1, m_A ) ) {
     fprintf( stderr, 
-             "ERROR in NoFLA_HQRRP_WY_blk_var4: ldim_A is < max( 1, m_A ).\n" );
+             "ERROR in hqrrp: ldim_A is < max( 1, m_A ).\n" );
   }
 
   // Some initializations.

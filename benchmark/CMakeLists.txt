@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.10)
 
-project(simple_test)
+project(benchmark)
 
 set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_CXX_STANDARD_REQUIRED True)
@@ -23,17 +23,33 @@ message(STATUS "${MKL_IMPORTED_TARGETS}")
 message(STATUS "Done looking for MKL.")
 
 set(
-    simple_test_cxx
-    simple_test.cpp
+    bench_mklvhqrrp_cxx
+    bench_mklvhqrrp.cpp
 )
 add_executable(
-    simple_test ${simple_test_cxx}
+    bench_mklvhqrrp ${bench_mklvhqrrp_cxx}
 )
 target_include_directories(
-    simple_test PUBLIC ${Random123_DIR} ${MKL_INCLUDE}
+    bench_mklvhqrrp PUBLIC ${Random123_DIR} ${MKL_INCLUDE}
 )
 target_link_libraries(
-    simple_test PUBLIC hqrrp blaspp lapackpp ${MKL}
+     bench_mklvhqrrp PUBLIC hqrrp blaspp lapackpp ${MKL}
 )
+
+
+set(
+    bench_blocksizes_cxx
+    bench_blocksizes.cpp
+)
+add_executable(
+    bench_blocksizes ${bench_blocksizes_cxx}
+)
+target_include_directories(
+    bench_blocksizes PUBLIC ${Random123_DIR} ${MKL_INCLUDE}
+)
+target_link_libraries(
+    bench_blocksizes PUBLIC hqrrp blaspp lapackpp ${MKL}
+)
+
 
 # cmake -DCMAKE_BINARY_DIR=`pwd` -Dhqrrp_DIR=`pwd`/../../hqrrp-install/lib/cmake -DMKL_DIR=/home/riley/intel/oneapi/mkl/latest/lib/cmake/mkl -DMKL_THREADING=gnu_thread -DRandom123_DIR=/opt/random123/include ..

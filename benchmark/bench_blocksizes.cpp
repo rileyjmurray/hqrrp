@@ -1,0 +1,58 @@
+#include <blas.hh>
+#include <hqrrp.h>
+// #include <mkl.h> // uncomment if you want to call MKL directly for some reason.
+
+#include <stdio.h>
+#include <unistd.h>
+#include <iostream>
+#include <math.h>
+#include <time.h>
+#include <stdlib.h>
+#include <bits/stdc++.h>
+
+#define max( a, b ) ( (a) > (b) ? (a) : (b) )
+#define min( a, b ) ( (a) < (b) ? (a) : (b) )
+
+// #define int64_t lapack_int
+// ^ Might be needed if LAPACK++ is linked against a library in the LP64 model (as opposed to ILP64)
+
+using std::chrono::high_resolution_clock;
+using std::chrono::duration_cast;
+using std::chrono::duration;
+using std::chrono::milliseconds;
+
+// ============================================================================
+// Declaration of local prototypes.
+
+double time_hqrrp(int64_t m_A, int64_t n_A, double *buff_A, int64_t nb_alg)
+{
+  int64_t *buff_p   = ( int64_t * ) calloc( n_A, sizeof( int64_t ) );
+  double *buff_tau = ( double * ) malloc( n_A * sizeof( double ) );
+  auto t1 = high_resolution_clock::now();
+  HQRRP::hqrrp(m_A, n_A, buff_A, m_A, buff_p, buff_tau, nb_alg, 10, 1);
+  auto t2 = high_resolution_clock::now();
+  double t = (double) duration_cast<milliseconds>(t2 - t1).count();
+  free( buff_p );
+  free( buff_tau );
+  return t;
+}
+
+
+// ============================================================================
+int main( int argc, char *argv[] ) {
+  int64_t m_A      = 10000;
+  int64_t n_A      = 10000;
+  double *buff_A   = ( double * ) malloc( m_A * n_A * sizeof( double ) );
+
+  // populate the test matrix and call MKL for unpivoted QR
+  int64_t block_sizes[] = {16, 32, 64, 128};
+  for (int64_t nb_alg : block_sizes)
+  {
+    HQRRP::genmat(m_A, n_A, buff_A, (uint64_t) 0);
+    double t = time_hqrrp(m_A, n_A, buff_A, nb_alg);
+    std::cout << t << "ms for HQRRP with nb_alg = " << nb_alg << std::endl;
+  }
+
+  free( buff_A );
+  return 0;
+}
