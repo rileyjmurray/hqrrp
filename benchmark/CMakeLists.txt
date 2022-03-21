@@ -52,4 +52,20 @@ target_link_libraries(
 )
 
 
+set(
+    experiment1_cxx
+    experiment1.cpp
+)
+add_executable(
+    experiment1 ${experiment1_cxx}
+)
+target_include_directories(
+    experiment1 PUBLIC ${Random123_DIR} ${MKL_INCLUDE}
+)
+target_link_libraries(
+    experiment1 PUBLIC hqrrp blaspp lapackpp ${MKL}
+)
+
+
+
 # cmake -DCMAKE_BINARY_DIR=`pwd` -Dhqrrp_DIR=`pwd`/../../hqrrp-install/lib/cmake -DMKL_DIR=/home/riley/intel/oneapi/mkl/latest/lib/cmake/mkl -DMKL_THREADING=gnu_thread -DRandom123_DIR=/opt/random123/include ..

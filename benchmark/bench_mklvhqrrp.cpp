@@ -37,7 +37,7 @@ double time_dgeqrx(int64_t m_A, int64_t n_A, double *buff_A, char x)
     case '4':
       HQRRP::dgeqp4(m_A, n_A, buff_A, m_A, buff_p, buff_tau);
       break;
-    case 'u':
+    case 'F':
       lapack::geqrf(m_A, n_A, buff_A, m_A, buff_tau);
       break;
     default:
@@ -61,7 +61,7 @@ int main( int argc, char *argv[] ) {
 
   // populate the test matrix and call MKL for unpivoted QR
   genmat(m_A, n_A, buff_A, (uint64_t) 0);
-  double tu = time_dgeqrx(m_A, n_A, buff_A, 'u');
+  double tu = time_dgeqrx(m_A, n_A, buff_A, 'F');
   std::cout << tu << "ms for unpivoted MKL\n";
 
   // **RE**populate the test matrix and run the randomized algorithm.
