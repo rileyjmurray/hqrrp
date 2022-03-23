@@ -10,9 +10,9 @@
 
 namespace HQRRP {
 
-void dgeqp4(lapack_int m, lapack_int n, double *A, lapack_int lda, lapack_int *jpvt, double *tau);
+void dgeqpr(lapack_int m, lapack_int n, double *A, lapack_int lda, lapack_int *jpvt, double *tau);
 
-void dgeqp4( lapack_int * m, lapack_int * n, double * A, lapack_int * lda, lapack_int * jpvt, double * tau,
+void dgeqpr( lapack_int * m, lapack_int * n, double * A, lapack_int * lda, lapack_int * jpvt, double * tau,
          double * work, lapack_int * lwork, lapack_int * info );
 
 lapack_int hqrrp( lapack_int m_A, lapack_int n_A, double * buff_A, lapack_int ldim_A,

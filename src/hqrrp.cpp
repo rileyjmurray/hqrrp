@@ -123,7 +123,7 @@ static int64_t NoFLA_QRP_pivot_G_B_C( int64_t j_max_col,
 
 
 // ============================================================================
-void dgeqp4( int64_t * m, int64_t * n, double * A, int64_t * lda, int64_t * jpvt, double * tau,
+void dgeqpr( int64_t * m, int64_t * n, double * A, int64_t * lda, int64_t * jpvt, double * tau,
         double * work, int64_t * lwork, int64_t * info ) {
 // 
 // This routine is plug compatible with LAPACK's routine dgeqp3.
@@ -338,7 +338,7 @@ void dgeqp4( int64_t * m, int64_t * n, double * A, int64_t * lda, int64_t * jpvt
 }
 
 
-void dgeqp4(int64_t m, int64_t n, double *A, int64_t lda, int64_t *jpvt, double *tau)
+void dgeqpr(int64_t m, int64_t n, double *A, int64_t lda, int64_t *jpvt, double *tau)
 {
   // This function is compatible with LAPACK++'s geqp3, provided the matrix A is 
   // double precision.

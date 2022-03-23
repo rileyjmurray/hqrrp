@@ -34,8 +34,8 @@ double time_dgeqrx(int64_t m_A, int64_t n_A, double *buff_A, char x)
     case '3': 
       lapack::geqp3(m_A, n_A, buff_A, m_A, buff_p, buff_tau);
       break;
-    case '4':
-      HQRRP::dgeqp4(m_A, n_A, buff_A, m_A, buff_p, buff_tau);
+    case 'R':
+      HQRRP::dgeqpr(m_A, n_A, buff_A, m_A, buff_p, buff_tau);
       break;
     case 'F':
       lapack::geqrf(m_A, n_A, buff_A, m_A, buff_tau);
@@ -66,7 +66,7 @@ int main( int argc, char *argv[] ) {
 
   // **RE**populate the test matrix and run the randomized algorithm.
   genmat(m_A, n_A, buff_A, (uint64_t) 0);
-  double t4 = time_dgeqrx(m_A, n_A, buff_A, '4');
+  double t4 = time_dgeqrx(m_A, n_A, buff_A, 'R');
   std::cout << t4 << "ms for HQRRP\n";
 
   // **RE**populate the test matrix and call MKL

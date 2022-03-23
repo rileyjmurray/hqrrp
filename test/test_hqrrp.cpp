@@ -90,7 +90,7 @@ void test_qrcp(int64_t m_A, int64_t n_A, uint64_t a_seed, bool randalg, bool ver
     
     if (randalg)
     {
-        HQRRP::dgeqp4(m_A, n_A, buff_A, ldim_A, buff_p, buff_tau);
+        HQRRP::dgeqpr(m_A, n_A, buff_A, ldim_A, buff_p, buff_tau);
     }
     else
     {
