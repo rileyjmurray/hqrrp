@@ -345,14 +345,14 @@ void dgeqpr(int64_t m, int64_t n, double *A, int64_t lda, int64_t *jpvt, double 
   int64_t info = 0;
   int64_t lwork = -1;
   double *buff_wk_qp4 = (double *) malloc( sizeof( double ) );
-  dgeqp4( & m, & n, A, & lda, jpvt, tau, 
+  dgeqpr( & m, & n, A, & lda, jpvt, tau, 
           buff_wk_qp4, & lwork, &info );
   if (info != 0) throw lapack::Error();
 
   lwork = (int64_t) *buff_wk_qp4;
   free(buff_wk_qp4);
   buff_wk_qp4 = ( double * ) malloc( lwork * sizeof( double ) );
-  dgeqp4( & m, & n, A, & lda, jpvt, tau, 
+  dgeqpr( & m, & n, A, & lda, jpvt, tau, 
           buff_wk_qp4, & lwork, &info );
   if (info != 0) throw lapack::Error();
   
