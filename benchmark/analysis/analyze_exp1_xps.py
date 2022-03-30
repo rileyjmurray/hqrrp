@@ -26,7 +26,7 @@ def mean_stddev(x, y):
     return ux, means, stddevs
 
 
-if __name__ == '__main__':
+def plot_times():
     data = read_data()
 
     qrf = data[data[:, 4] == 'QRF', :][:, [0, 5]].astype(float)
@@ -63,3 +63,33 @@ if __name__ == '__main__':
     plt.errorbar(ratnx, ratnm, yerr=ratns)
     plt.legend(['QP3 / QPR : uniform', 'QP3 / QPR : normal'])
     plt.show()
+
+
+def effective_gflops_square(sizes, times):
+    num = (sizes * 1e-3)**3
+    num *= 4/3
+    gflops = num / times
+    return gflops
+
+
+def plot_flop_rates():
+    data = read_data()
+
+    qrf = data[data[:, 4] == 'QRF', :][:, [0, 5]].astype(float)
+    qrfx, qrfm, _ = mean_stddev(qrf[:, 0], qrf[:, 1])
+    qp3 = data[data[:, 4] == 'QP3', :][:, [0, 5]].astype(float)
+    qp3x, qp3m, _ = mean_stddev(qp3[:, 0], qp3[:, 1])
+    qpr = data[data[:, 4] == 'QPR', :][:, [0, 5]].astype(float)
+    qprx, qprm, _ = mean_stddev(qpr[:, 0], qpr[:, 1])
+    plt.plot(qrfx, effective_gflops_square(qrfx, qrfm), c='b')
+    plt.plot(qprx, effective_gflops_square(qprx, qprm), c='k')
+    plt.plot(qp3x, effective_gflops_square(qp3x, qp3m), c='r')
+    plt.legend(['QRF', 'QPR', 'QP3'])
+    plt.ylabel('GFlops')
+    plt.xlabel('n')
+    plt.show()
+    pass
+
+
+if __name__ == '__main__':
+    plot_times()
