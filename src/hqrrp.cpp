@@ -195,7 +195,7 @@ void dgeqpr( int64_t * m, int64_t * n, double * A, int64_t * lda, int64_t * jpvt
           A, & ldim_A,
           tau,
           qry_work, &ineg_one, info );
-      if (info < 0) {
+      if (*info < 0) {
           throw blas::Error();
       }
       int64_t lwork_determ = real(qry_work[0]);

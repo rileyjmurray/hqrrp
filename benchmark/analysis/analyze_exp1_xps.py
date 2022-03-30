@@ -3,7 +3,7 @@ from matplotlib import pyplot as plt
 
 
 def read_data():
-    data = np.genfromtxt('../exp1_log_xps.csv', dtype=object, delimiter=',')
+    data = np.genfromtxt('../experiments/exp1_log_xps_4threads.csv', dtype=object, delimiter=',')
     data[:, 0] = data[:, 0].astype(int)
     data[:, 1] = data[:, 1].astype(int)
     data[:, 2] = np.array([s.strip() for s in data[:, 2].astype(str)])
@@ -93,3 +93,4 @@ def plot_flop_rates():
 
 if __name__ == '__main__':
     plot_times()
+    plot_flop_rates()
