@@ -2,15 +2,14 @@ import numpy as np
 from matplotlib import pyplot as plt
 
 
-def read_data():
-    data = np.genfromtxt('../experiments/exp1_log_xps_4threads.csv', dtype=object, delimiter=',')
+def read_data(threads):
+    fname = f'../experiments/exp1_log_intelmac_{threads}threads.csv'
+    data = np.genfromtxt(fname, dtype=object, delimiter=',')
     data[:, 0] = data[:, 0].astype(int)
     data[:, 1] = data[:, 1].astype(int)
     data[:, 2] = np.array([s.strip() for s in data[:, 2].astype(str)])
     data[:, 3] = data[:, 3].astype(int)
     data[:, 4] = np.array([s.strip() for s in data[:, 4].astype(str)])
-    col4 = data[:, 4]
-    col4[col4 == 'QP4'] = 'QPR'
     data[:, 5] = data[:, 5].astype(float)
     return data
 
@@ -26,8 +25,8 @@ def mean_stddev(x, y):
     return ux, means, stddevs
 
 
-def plot_times():
-    data = read_data()
+def plot_times(threads):
+    data = read_data(threads)
 
     qrf = data[data[:, 4] == 'QRF', :][:, [0, 5]].astype(float)
     qrfx, qrfm, _ = mean_stddev(qrf[:, 0], qrf[:, 1])
@@ -39,6 +38,7 @@ def plot_times():
     plt.plot(qprx, qprm, c='k')
     plt.plot(qp3x, qp3m, c='r')
     plt.legend(['QRF', 'QPR', 'QP3'])
+    plt.title(f'Runtimes (ms) for Intel mac ({threads} threads)')
     plt.show()
 
     ratf = qp3[:, 1] / qrf[:, 1]
@@ -48,20 +48,7 @@ def plot_times():
     plt.errorbar(ratfx, ratfm, yerr=ratfs, c='b')
     plt.errorbar(rat4x, rat4m, yerr=rat4s, c='k')
     plt.legend(['QP3 / QRF', 'QP3 / QPR'])
-    plt.show()
-
-    qpr_unif = data[(data[:, 4] == 'QPR') & (data[:, 2] == 'u'), :][:, [0, 5]].astype(float)
-    qp3_unif = data[(data[:, 4] == 'QP3') & (data[:, 2] == 'u'), :][:, [0, 5]].astype(float)
-    qpr_norm = data[(data[:, 4] == 'QPR') & (data[:, 2] == 'n'), :][:, [0, 5]].astype(float)
-    qp3_norm = data[(data[:, 4] == 'QP3') & (data[:, 2] == 'n'), :][:, [0, 5]].astype(float)
-
-    ratu = qp3_unif[:, 1] / qpr_unif[:, 1]
-    ratn = qp3_norm[:, 1] / qpr_norm[:, 1]
-    ratux, ratum, ratus = mean_stddev(qp3_unif[:, 0], ratu)
-    ratnx, ratnm, ratns = mean_stddev(qp3_norm[:, 0], ratn)
-    plt.errorbar(ratux, ratum, yerr=ratus)
-    plt.errorbar(ratnx, ratnm, yerr=ratns)
-    plt.legend(['QP3 / QPR : uniform', 'QP3 / QPR : normal'])
+    plt.title(f'Speedups over QP3 for Intel mac ({threads} threads)')
     plt.show()
 
 
@@ -72,9 +59,8 @@ def effective_gflops_square(sizes, times):
     return gflops
 
 
-def plot_flop_rates():
-    data = read_data()
-
+def plot_flop_rates(threads):
+    data = read_data(threads)
     qrf = data[data[:, 4] == 'QRF', :][:, [0, 5]].astype(float)
     qrfx, qrfm, _ = mean_stddev(qrf[:, 0], qrf[:, 1])
     qp3 = data[data[:, 4] == 'QP3', :][:, [0, 5]].astype(float)
@@ -87,10 +73,14 @@ def plot_flop_rates():
     plt.legend(['QRF', 'QPR', 'QP3'])
     plt.ylabel('GFlops')
     plt.xlabel('n')
+    plt.title(f'Standardized GFlops for Intel mac ({threads} threads)')
     plt.show()
     pass
 
 
 if __name__ == '__main__':
-    plot_times()
-    plot_flop_rates()
+    plot_times(2)
+    plot_flop_rates(2)
+    plot_times(4)
+    plot_flop_rates(4)
+
