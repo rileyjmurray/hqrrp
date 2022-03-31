@@ -48,6 +48,7 @@ WITHOUT ANY WARRANTY EXPRESSED OR IMPLIED.
 #include <blas.hh>
 #include "hqrrp.h"
 #include <lapack/fortran.h>
+#include <lapack/config.h>
 
 
 namespace HQRRP {
@@ -55,7 +56,6 @@ namespace HQRRP {
 // Matrices with dimensions larger than THRESHOLD_FOR_DGEQP3 are processed 
 // with the new HQRRP code.
 #define THRESHOLD_FOR_DGEQP3  3
-#define int64_t lapack_int
 
 // ============================================================================
 // Definition of macros.
@@ -120,6 +120,153 @@ static int64_t NoFLA_QRP_pivot_G_B_C( int64_t j_max_col,
                int64_t pivot_C, int64_t m_C, double * buff_C, int64_t ldim_C, 
                int64_t * buff_p,
                double * buff_d, double * buff_e );
+
+
+void _LAPACK_dgeqp3(
+  int64_t m, int64_t n, double *A, int64_t lda,
+  int64_t * jpvt, double *tau, double *work,
+  int64_t * lwork, int64_t * info)
+{
+  lapack_int m_ = (lapack_int) m;
+  lapack_int n_ = (lapack_int) n;
+  lapack_int lda_ = (lapack_int) lda;
+  lapack_int *jpvt_ = (lapack_int *) malloc(n_ * sizeof(lapack_int));
+  for (int64_t i = 0; i < n; ++i)
+  {
+    jpvt_[i] = (lapack_int) jpvt[i];
+  }
+  lapack_int *lwork_ = (lapack_int *) lwork;
+  lapack_int *info_ = (lapack_int *) info;
+  LAPACK_dgeqrf(&m_, &n_, A, &lda_, tau, work, lwork_, info_);
+  for (int64_t i = 0; i < n; ++i)
+  {
+    jpvt[i] = (int64_t) jpvt[i];
+  }
+  *info = (int64_t) *info_;
+  free(jpvt_);
+  return;
+}
+
+void _LAPACK_dgeqrf(
+  int64_t m, int64_t n, double *A, int64_t lda,
+  double *tau, double *work,
+  int64_t * lwork, int64_t * info)
+{
+  lapack_int m_ = (lapack_int) m;
+  lapack_int n_ = (lapack_int) n;
+  lapack_int lda_ = (lapack_int) lda;
+  lapack_int *lwork_ = (lapack_int *) lwork;
+  lapack_int *info_ = (lapack_int *) info;
+  LAPACK_dgeqrf(&m_, &n_, A, &lda_, tau, work, lwork_, info_);
+  *info = (int64_t) *info_;
+  return;
+}
+
+void _LAPACK_dormqr(
+  blas::Side side,
+  lapack::Op op,
+  int64_t m, int64_t n, int64_t k, double *A, int64_t lda,
+  double * tau, double *b, int64_t ldb,
+  double * work, int64_t * lwork, int64_t * info)
+{
+  char side_ = blas::side2char(side);
+  char trans_ = blas::op2char(op);
+  lapack_int m_ = (lapack_int) m;
+  lapack_int n_ = (lapack_int) n;
+  lapack_int k_ = (lapack_int) k;
+  lapack_int lda_ = (lapack_int) lda;
+  lapack_int *lwork_ = (lapack_int *) lwork;
+  lapack_int *info_ = (lapack_int *) info;
+  lapack_int ldb_ = (lapack_int) ldb;
+  LAPACK_dormqr(& side_, & trans_,
+            & m_, & n_, & k_,
+            A, & lda_, tau,
+            b, & ldb_, 
+            work, lwork_, info_
+          #ifdef LAPACK_FORTRAN_STRLEN_END
+          , 1, 1
+          #endif 
+            );
+  *info = (int64_t) *info_;
+  return;
+}
+
+void _LAPACK_dlacpy(
+  lapack::MatrixType atype,
+  int64_t m, int64_t n, double *A, int64_t lda,
+  double *b, int64_t ldb)
+{
+  lapack_int m_ = (lapack_int) m;
+  lapack_int n_ = (lapack_int) n;
+  lapack_int lda_ = (lapack_int) lda;
+  lapack_int ldb_ = (lapack_int) ldb;
+  char matrixtype_ = matrixtype2char( atype );
+  LAPACK_dlacpy( &matrixtype_, & m_, & n_, A, & lda_,
+                                b, & ldb_
+              #ifdef LAPACK_FORTRAN_STRLEN_END
+              , 1
+              #endif
+              );
+}
+
+void _LAPACK_dlafrb(
+  lapack::Side side,
+  lapack::Op op,
+  lapack::Direction dir,
+  lapack::StoreV  storev,
+  int64_t m, int64_t n, int64_t k,
+  double *buff_U, int64_t ldu,
+  double *buff_T, int64_t ldt,
+  double *buff_B, int64_t ldb,
+  double *buff_W, int64_t ldw
+)
+{
+  lapack_int m_ = (lapack_int) m;
+  lapack_int n_ = (lapack_int) n;
+  lapack_int k_ = (lapack_int) k;
+  lapack_int ldim_U = (lapack_int) ldu;
+  lapack_int ldim_T = (lapack_int) ldt;
+  lapack_int ldim_B = (lapack_int) ldb;
+  lapack_int ldim_W = (lapack_int) ldw;
+  char side_ = blas::side2char( side );
+  char trans_ = blas::op2char( op );
+  char direction_ = lapack::direction2char( dir );
+  char storev_ = lapack::storev2char( storev );
+  LAPACK_dlarfb( & side_, & trans_, & direction_, & storev_,  
+                & m_, & n_, & k_, buff_U, & ldim_U, buff_T, & ldim_T, 
+                buff_B, & ldim_B, buff_W, & ldim_W
+                #ifdef LAPACK_FORTRAN_STRLEN_END
+                , 1, 1, 1, 1
+                #endif
+                );
+  return;
+}
+
+
+void _LAPACK_dlarf(
+  lapack::Side side,
+  int64_t m, int64_t n,
+  double *v, int64_t inc_v, double tau,
+  double *C, int64_t ldc,
+  double *work
+)
+{
+    char side_ = blas::side2char( side );
+    lapack_int inc_v_ = (lapack_int) inc_v;
+    lapack_int m_ = (lapack_int) m;
+    lapack_int n_ = (lapack_int) n;
+    lapack_int ldc_ = (lapack_int) ldc;
+    LAPACK_dlarf( & side_, & m_, & n_, 
+        v, & inc_v_,
+        & tau,
+        C, & ldc_,
+        work
+        #ifdef LAPACK_FORTRAN_STRLEN_END
+        , 1
+        #endif
+        );
+  return;
+}
 
 
 // ============================================================================
@@ -190,9 +337,9 @@ void dgeqpr( int64_t * m, int64_t * n, double * A, int64_t * lda, int64_t * jpvt
       */
       iws    = 3 * n_A + 1;
       double qry_work[1];
-      LAPACK_dgeqrf(
-          & m_A, & n_A,
-          A, & ldim_A,
+      _LAPACK_dgeqrf(
+          m_A, n_A,
+          A, ldim_A,
           tau,
           qry_work, &ineg_one, info );
       if (*info < 0) {
@@ -223,9 +370,9 @@ void dgeqpr( int64_t * m, int64_t * n, double * A, int64_t * lda, int64_t * jpvt
   // Use LAPACK's DGEQPF or DGEQP3 for small matrices.
   if( mn_A < THRESHOLD_FOR_DGEQP3 ) {
     //// printf( "Calling dgeqp3\n" );
-    LAPACK_dgeqp3( & m_A,
-                   & n_A, A,
-                   & ldim_A, jpvt, tau, work, lwork, info );
+    _LAPACK_dgeqp3( m_A,
+                    n_A, A,
+                    ldim_A, jpvt, tau, work, lwork, info );
     return;
   }
 
@@ -251,8 +398,8 @@ void dgeqpr( int64_t * m, int64_t * n, double * A, int64_t * lda, int64_t * jpvt
   // Factorize fixed columns at the front.
   num_factorized_fixed_cols = min( m_A, num_fixed_cols );
   if( num_factorized_fixed_cols > 0 ) {
-    LAPACK_dgeqrf( & m_A, & num_factorized_fixed_cols, A, & ldim_A, tau, work, lwork,
-                   info );
+    _LAPACK_dgeqrf( m_A, num_factorized_fixed_cols, A, ldim_A, tau, work, lwork,
+                    info );
     if( * info != 0 ) {
       fprintf( stderr, "ERROR in dgeqrf: Info: %d \n", (int) (*info) );
     }
@@ -260,16 +407,13 @@ void dgeqpr( int64_t * m, int64_t * n, double * A, int64_t * lda, int64_t * jpvt
     if( num_factorized_fixed_cols < n_A ) {
       n_rest = n_A - num_factorized_fixed_cols;
 
-      char side_ = blas::side2char(blas::Side::Left);
-      char trans_ = blas::op2char(lapack::Op::Trans);
-      LAPACK_dormqr(& side_, & trans_,
-               & m_A, & n_rest, & num_factorized_fixed_cols,
-               A, & ldim_A, tau,
-               & A[ 0 + num_factorized_fixed_cols * ldim_A ], & ldim_A, 
+      //char side_ = blas::side2char(blas::Side::Left);
+      //char trans_ = blas::op2char(lapack::Op::Trans);
+      _LAPACK_dormqr(blas::Side::Left, lapack::Op::Trans,
+               m_A, n_rest, num_factorized_fixed_cols,
+               A, ldim_A, tau,
+               & A[ 0 + num_factorized_fixed_cols * ldim_A ], ldim_A, 
                work, lwork, info
-              #ifdef LAPACK_FORTRAN_STRLEN_END
-              , 1, 1
-              #endif 
                );
       if( * info != 0 ) {
         fprintf( stderr, "ERROR in dormqr: Info: %d \n", (int) (*info ));
@@ -561,12 +705,8 @@ int64_t hqrrp( int64_t m_A, int64_t n_A, double * buff_A, int64_t ldim_A,
       //// FLA_Copy( YR, VR );
       //// FLA_QRPmod_WY_unb_var4( 1, bRow, VR, pB, sB, 1, AR, 1, YR, 0, None );
       char matrixtype_ = matrixtype2char( lapack::MatrixType::General );
-      LAPACK_dlacpy( &matrixtype_, & m_V, & n_VR, buff_YR, & ldim_Y,
-                                     buff_VR, & ldim_V
-                    #ifdef LAPACK_FORTRAN_STRLEN_END
-                    , 1
-                    #endif
-                    );
+      lapack::lacpy( lapack::MatrixType::General, m_V, n_VR, buff_YR, ldim_Y,
+                                     buff_VR, ldim_V);
       NoFLA_QRPmod_WY_unb_var4( 1, b,
           m_V, n_VR, buff_VR, ldim_V, buff_pB, buff_sB,
           1, m_A, buff_AR, ldim_A,
@@ -712,12 +852,9 @@ static int64_t NoFLA_Downdate_Y(
   // B = G1.
   //// FLA_Copy( G1, B );
   char matrixtype_ = lapack::matrixtype2char( lapack::MatrixType::General );
-  LAPACK_dlacpy(&matrixtype_, & m_G1, & n_G1,
-                              buff_G1, & ldim_G1,
-                              buff_B, & ldim_B
-                #ifdef LAPACK_FORTRAN_STRLEN_END
-                , 1
-                #endif
+  lapack::lacpy(lapack::MatrixType::General, m_G1, n_G1,
+                              buff_G1, ldim_G1,
+                              buff_B, ldim_B
                 );
 
   // B = B * U11.
@@ -817,20 +954,16 @@ static int64_t NoFLA_Apply_Q_WY_lhfc_blk_var4(
   ldim_W = max( 1, n_B );
  
   // Apply the block transformation.
-  char side_ = blas::side2char( blas::Side::Left );
-  char trans_ = blas::op2char( lapack::Op::Trans );
-  char direction_ = lapack::direction2char( lapack::Direction::Forward );
-  char storev_ = lapack::storev2char( lapack::StoreV::Columnwise );
-  LAPACK_dlarfb( & side_, & trans_, & direction_, & storev_, 
-                 & m_B, & n_B, & n_U, buff_U, & ldim_U, buff_T, & ldim_T, 
-                 buff_B, & ldim_B, buff_W, & ldim_W
-                 #ifdef LAPACK_FORTRAN_STRLEN_END
-                 , 1, 1, 1, 1
-                 #endif
-                 );
+  _LAPACK_dlafrb(lapack::Side::Left, lapack::Op::Trans,
+    lapack::Direction::Forward, lapack::StoreV::Columnwise,
+    m_B, n_B, n_U,
+    buff_U, ldim_U,
+    buff_T, ldim_T,
+    buff_B, ldim_B,
+    buff_W, ldim_W
+  );
 
   // Remove auxiliary object.
-  //// FLA_Obj_free( & W );
   free( buff_W );
 
   return 0;
@@ -848,7 +981,7 @@ static int64_t NoFLA_Apply_Q_WY_rnfc_blk_var4(
 //   Q = I - U * T' * U'.
 //
   double  * buff_W;
-  int64_t     ldim_W;
+  int64_t   ldim_W;
 
   // Create auxiliary object.
   //// FLA_Obj_create_conf_to( FLA_TRANSPOSE, B1, & W );
@@ -856,20 +989,13 @@ static int64_t NoFLA_Apply_Q_WY_rnfc_blk_var4(
   ldim_W = max( 1, m_B );
   
   // Apply the block transformation. 
-  char side_ = blas::side2char( blas::Side::Right );
-  char trans_ = blas::op2char( lapack::Op::NoTrans );
-  char direction_ = lapack::direction2char( lapack::Direction::Forward );
-  char storev_ = lapack::storev2char( lapack::StoreV::Columnwise );
-  LAPACK_dlarfb( & side_, & trans_, & direction_, & storev_,  
-                 & m_B, & n_B, & n_U, buff_U, & ldim_U, buff_T, & ldim_T, 
-                 buff_B, & ldim_B, buff_W, & ldim_W
-                 #ifdef LAPACK_FORTRAN_STRLEN_END
-                 , 1, 1, 1, 1
-                 #endif
-                 );
+  _LAPACK_dlafrb(lapack::Side::Right, lapack::Op::NoTrans,
+        lapack::Direction::Forward, lapack::StoreV::Columnwise,
+        m_B, n_B, n_U, buff_U, ldim_U, buff_T, ldim_T,
+        buff_B, ldim_B, buff_W, ldim_W
+  );
 
   // Remove auxiliary object.
-  //// FLA_Obj_free( & W );
   free( buff_W );
 
   return 0;
@@ -946,11 +1072,12 @@ static int64_t NoFLA_QRPmod_WY_unb_var4( int64_t pivoting, int64_t num_stages,
     // left to the column vector consisting of alpha11 and a21 annihilates
     // the entries in a21 (and updates alpha11).
     n_house_vector = m_a21 + 1;
-    LAPACK_dlarfg(
-             & n_house_vector,
-             & buff_A[ j + j * ldim_A ],
-             & buff_A[ min( m_A-1, j+1 ) + j * ldim_A ], & i_one,
-             & buff_t[ j ] );
+    lapack::larfg(n_house_vector,
+        & buff_A[ j + j * ldim_A ],
+        & buff_A[ min( m_A-1, j+1 ) + j * ldim_A ],
+        i_one,
+        & buff_t[j]
+    );
 
     // / a12t \ =  H / a12t \
     // \ A22  /      \ A22  /
@@ -959,16 +1086,12 @@ static int64_t NoFLA_QRPmod_WY_unb_var4( int64_t pivoting, int64_t num_stages,
     diag = buff_A[ j + j * ldim_A ];
     buff_A[ j + j * ldim_A ] = 1.0;
     m_rest = m_A22 + 1;
-    char side_ = blas::side2char( blas::Side::Left );
-    LAPACK_dlarf( & side_, & m_rest, & n_A22, 
-        & buff_A[ j + j * ldim_A ], & i_one,
-        & buff_t[ j ],
-        & buff_A[ j + ( j+1 ) * ldim_A ], & ldim_A,
+    _LAPACK_dlarf( lapack::Side::Left, m_rest, n_A22, 
+        & buff_A[ j + j * ldim_A ], 1,
+        buff_t[ j ],
+        & buff_A[ j + ( j+1 ) * ldim_A ], ldim_A,
         buff_workspace
-        #ifdef LAPACK_FORTRAN_STRLEN_END
-        , 1
-        #endif
-        );
+    );
     buff_A[ j + j * ldim_A ] = diag;
 
     if( pivoting == 1 ) {

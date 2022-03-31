@@ -3,12 +3,6 @@
 #define BLAS_HH
 #endif
 
-#ifndef LAPACK_HH
-#include <lapack/config.h>
-#define int64_t lapack_int
-#define LAPACK_HH
-#endif
-
 
 #ifndef HQRRP_UTIL_HH
 #define HQRRP_UTIL_HH
