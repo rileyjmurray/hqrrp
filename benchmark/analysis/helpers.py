@@ -45,6 +45,19 @@ def exp1_ratio_means_and_stddevs(data):
     return qrf, qpr
 
 
+def exp1_floprates_means_and_stddevs(data):
+    qrf = data[data[:, 4] == 'QRF', :][:, [0, 5]].astype(float)
+    qp3 = data[data[:, 4] == 'QP3', :][:, [0, 5]].astype(float)
+    qpr = data[data[:, 4] == 'QPR', :][:, [0, 5]].astype(float)
+    qrf[:, 1] = effective_gflops_square(qrf[:, 0], qrf[:, 1])
+    qpr[:, 1] = effective_gflops_square(qpr[:, 0], qpr[:, 1])
+    qp3[:, 1] = effective_gflops_square(qp3[:, 0], qp3[:, 1])
+    qrf = mean_stddev(qrf[:, 0], qrf[:, 1])
+    qp3 = mean_stddev(qp3[:, 0], qp3[:, 1])
+    qpr = mean_stddev(qpr[:, 0], qpr[:, 1])
+    return qrf, qp3, qpr
+
+
 def effective_gflops_square(sizes, times):
     num = (sizes * 1e-3)**3
     num *= 4/3
