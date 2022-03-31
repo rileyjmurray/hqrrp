@@ -6,7 +6,7 @@
 #include <math.h>
 #include <time.h>
 #include <stdlib.h>
-#include <bits/stdc++.h>
+#include <chrono>
 
 
 using std::chrono::high_resolution_clock;
@@ -25,8 +25,8 @@ double time_dgeqrx(int64_t m_A, int64_t n_A, double *buff_A, char x)
     case '3': 
       lapack::geqp3(m_A, n_A, buff_A, m_A, buff_p, buff_tau);
       break;
-    case '4':
-      HQRRP::dgeqp4(m_A, n_A, buff_A, m_A, buff_p, buff_tau);
+    case 'R':
+      HQRRP::dgeqpr(m_A, n_A, buff_A, m_A, buff_p, buff_tau);
       break;
     case 'F':
       lapack::geqrf(m_A, n_A, buff_A, m_A, buff_tau);
@@ -67,8 +67,8 @@ int main( int argc, char *argv[] ) {
 
             // **RE**populate the test matrix and run the randomized algorithm.
             HQRRP::genmat(m_A, n_A, buff_A, test_seed, test_dist);
-            double t4 = time_dgeqrx(m_A, n_A, buff_A, '4');
-            std::cout << line_prefix << ", QP4, " << t4 << std::endl;
+            double t4 = time_dgeqrx(m_A, n_A, buff_A, 'R');
+            std::cout << line_prefix << ", QPR, " << t4 << std::endl;
 
             // **RE**populate the test matrix and call MKL
             HQRRP::genmat(m_A, n_A, buff_A, test_seed, test_dist);

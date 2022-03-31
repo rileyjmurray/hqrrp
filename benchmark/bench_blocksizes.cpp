@@ -8,7 +8,7 @@
 #include <math.h>
 #include <time.h>
 #include <stdlib.h>
-#include <bits/stdc++.h>
+#include <chrono>
 
 #define max( a, b ) ( (a) > (b) ? (a) : (b) )
 #define min( a, b ) ( (a) < (b) ? (a) : (b) )
