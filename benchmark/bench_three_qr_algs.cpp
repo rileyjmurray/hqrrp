@@ -1,6 +1,5 @@
 #include <blas.hh>
 #include <hqrrp.h>
-// #include <mkl.h> // uncomment if you want to call MKL directly for some reason.
 
 #include <stdio.h>
 #include <unistd.h>
@@ -13,8 +12,6 @@
 #define max( a, b ) ( (a) > (b) ? (a) : (b) )
 #define min( a, b ) ( (a) < (b) ? (a) : (b) )
 
-// #define int64_t lapack_int
-// ^ Might be needed if LAPACK++ is linked against a library in the LP64 model (as opposed to ILP64)
 
 using std::chrono::high_resolution_clock;
 using std::chrono::duration_cast;
@@ -62,7 +59,7 @@ int main( int argc, char *argv[] ) {
   // populate the test matrix and call MKL for unpivoted QR
   genmat(m_A, n_A, buff_A, (uint64_t) 0);
   double tu = time_dgeqrx(m_A, n_A, buff_A, 'F');
-  std::cout << tu << "ms for unpivoted MKL\n";
+  std::cout << tu << "ms for unpivoted QR with LAPACK++\n";
 
   // **RE**populate the test matrix and run the randomized algorithm.
   genmat(m_A, n_A, buff_A, (uint64_t) 0);
@@ -72,7 +69,7 @@ int main( int argc, char *argv[] ) {
   // **RE**populate the test matrix and call MKL
   genmat(m_A, n_A, buff_A, (uint64_t) 0);
   double t3 = time_dgeqrx(m_A, n_A, buff_A, '3');
-  std::cout << t3 << "ms for MKL\n";
+  std::cout << t3 << "ms for pivoted QR (QP3) with LAPACK++\n";
 
   free( buff_A );
   return 0;

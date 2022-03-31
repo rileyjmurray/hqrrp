@@ -1,6 +1,5 @@
 #include <blas.hh>
 #include <hqrrp.h>
-// #include <mkl.h> // uncomment if you want to call MKL directly for some reason.
 
 #include <stdio.h>
 #include <unistd.h>
@@ -13,8 +12,6 @@
 #define max( a, b ) ( (a) > (b) ? (a) : (b) )
 #define min( a, b ) ( (a) < (b) ? (a) : (b) )
 
-// #define int64_t lapack_int
-// ^ Might be needed if LAPACK++ is linked against a library in the LP64 model (as opposed to ILP64)
 
 using std::chrono::high_resolution_clock;
 using std::chrono::duration_cast;
