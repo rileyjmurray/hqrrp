@@ -36,7 +36,6 @@ def plot_flop_rates(threads):
     plt.errorbar(qpr[0], qpr[1], yerr=qpr[2], c='k')
     plt.errorbar(qp3[0], qp3[1], yerr=qp3[2], c='r')
     plt.legend(['QRF', 'QPR', 'QP3'])
-    plt.ylabel('GFlops')
     plt.ylim(ymin=0)
     plt.xlabel('n')
     plt.ylabel('Standardized GFlops')
@@ -45,10 +44,37 @@ def plot_flop_rates(threads):
     pass
 
 
+def plot_speedups_and_rates(threads):
+    data = helpers.read_exp1_data('intelmac', threads)
+
+    fig, axs = plt.subplots(2, dpi=400, sharex=True)
+
+    qrf, qp3, qpr = helpers.exp1_floprates_means_and_stddevs(data)
+    axs[1].errorbar(qrf[0], qrf[1], yerr=qrf[2], c='b')
+    axs[1].errorbar(qpr[0], qpr[1], yerr=qpr[2], c='k')
+    axs[1].errorbar(qp3[0], qp3[1], yerr=qp3[2], c='r')
+    axs[1].legend(['QRF', 'QPR', 'QP3'])
+    axs[1].set_ylabel('GFlops')
+    axs[1].set_ylim(ymin=0)
+    axs[1].set_xlabel('n')
+    axs[1].grid(alpha=0.25, linestyle='--')
+    axs[1].set_title('Flop rates (standardized)')
+
+    ratf, ratr = helpers.exp1_ratio_means_and_stddevs(data)
+    axs[0].errorbar(ratf[0], ratf[1], yerr=ratf[2], c='b')
+    axs[0].errorbar(ratr[0], ratr[1], yerr=ratr[2], c='k')
+    axs[0].legend(['QRF', 'QPR'])
+    axs[0].set_ylim(ymin=0)
+    axs[0].set_ylabel('(QP3 time) / (alg time)')
+    axs[0].grid(alpha=0.25, linestyle='--')
+    axs[0].set_title('Speedup relative to classical pivoting (QP3)')
+
+    fig.suptitle('Intel Macbook Pro: Accelerate, 4 threads')
+    fig.show()
+
+
 if __name__ == '__main__':
-    plot_times(2)
-    plot_speedups(2)
-    plot_flop_rates(2)
-    plot_times(4)
-    plot_speedups(4)
-    plot_flop_rates(4)
+    # plots for 2 threads are super messy
+    #plot_speedups(4)
+    #plot_flop_rates(4)
+    plot_speedups_and_rates(4)
