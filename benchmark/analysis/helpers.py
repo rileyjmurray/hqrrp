@@ -2,7 +2,11 @@ import numpy as np
 
 
 def read_exp1_data(platform, threads):
-    fname = f'../experiments/exp1_log_{platform}_{threads}threads.csv'
+    if isinstance(threads, int):
+        fname = f'../experiments/exp1_log_{platform}_{threads}threads.csv'
+    else:
+        assert threads == ''
+        fname = f'../experiments/exp1_log_{platform}_accel.csv'
     data = np.genfromtxt(fname, dtype=object, delimiter=',')
     data[:, 0] = data[:, 0].astype(int)
     data[:, 1] = data[:, 1].astype(int)

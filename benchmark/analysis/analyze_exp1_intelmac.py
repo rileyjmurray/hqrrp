@@ -70,7 +70,7 @@ def plot_speedups_and_rates(threads):
     axs[0].grid(alpha=0.25, linestyle='--')
     #axs[0].set_title('Speedup relative to classical pivoting (QP3)')
 
-    fig.suptitle(f'Intel Macbook Pro: Accelerate, {threads} threads')
+    fig.suptitle(f'Intel Macbook Pro: Accelerate, {threads} threads', y=0.95, fontsize='x-large')
     fig.savefig(f'intelmac_{threads}threads_fig.pdf')
     fig.show()
 
