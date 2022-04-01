@@ -4,6 +4,7 @@
 *.o
 *.so
 *.a
+**/__pycache__/**
 
 blaspp/
 blaspp/*

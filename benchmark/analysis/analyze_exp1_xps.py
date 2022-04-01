@@ -1,96 +1,80 @@
 import numpy as np
 from matplotlib import pyplot as plt
+import analysis.helpers as helpers
 
 
-def read_data():
-    data = np.genfromtxt('../experiments/exp1_log_xps_4threads.csv', dtype=object, delimiter=',')
-    data[:, 0] = data[:, 0].astype(int)
-    data[:, 1] = data[:, 1].astype(int)
-    data[:, 2] = np.array([s.strip() for s in data[:, 2].astype(str)])
-    data[:, 3] = data[:, 3].astype(int)
-    data[:, 4] = np.array([s.strip() for s in data[:, 4].astype(str)])
-    col4 = data[:, 4]
-    col4[col4 == 'QP4'] = 'QPR'
-    data[:, 5] = data[:, 5].astype(float)
-    return data
-
-
-def mean_stddev(x, y):
-    ux = np.unique(x)
-    means = np.zeros(ux.size)
-    stddevs = np.zeros(ux.size)
-    for i, val in enumerate(ux):
-        yi = y[x == val]
-        means[i] = np.mean(yi)
-        stddevs[i] = np.std(yi)
-    return ux, means, stddevs
-
-
-def plot_times():
-    data = read_data()
-
-    qrf = data[data[:, 4] == 'QRF', :][:, [0, 5]].astype(float)
-    qrfx, qrfm, _ = mean_stddev(qrf[:, 0], qrf[:, 1])
-    qp3 = data[data[:, 4] == 'QP3', :][:, [0, 5]].astype(float)
-    qp3x, qp3m, _ = mean_stddev(qp3[:, 0], qp3[:, 1])
-    qpr = data[data[:, 4] == 'QPR', :][:, [0, 5]].astype(float)
-    qprx, qprm, _ = mean_stddev(qpr[:, 0], qpr[:, 1])
-    plt.plot(qrfx, qrfm, c='b')
-    plt.plot(qprx, qprm, c='k')
-    plt.plot(qp3x, qp3m, c='r')
+def plot_times(threads):
+    data = helpers.read_exp1_data('xps', threads)
+    qrf, qp3, qpr = helpers.exp1_times_means_and_stddevs(data)
+    plt.errorbar(qrf[0], qrf[1]/1000, yerr=qrf[2]/1000, c='b')
+    plt.errorbar(qpr[0], qpr[1]/1000, yerr=qpr[2]/1000, c='k')
+    plt.errorbar(qp3[0], qp3[1]/1000, yerr=qp3[2]/1000, c='r')
     plt.legend(['QRF', 'QPR', 'QP3'])
-    plt.show()
-
-    ratf = qp3[:, 1] / qrf[:, 1]
-    rat4 = qp3[:, 1] / qpr[:, 1]
-    ratfx, ratfm, ratfs = mean_stddev(qp3[:, 0], ratf)
-    rat4x, rat4m, rat4s = mean_stddev(qp3[:, 0], rat4)
-    plt.errorbar(ratfx, ratfm, yerr=ratfs, c='b')
-    plt.errorbar(rat4x, rat4m, yerr=rat4s, c='k')
-    plt.legend(['QP3 / QRF', 'QP3 / QPR'])
-    plt.show()
-
-    qpr_unif = data[(data[:, 4] == 'QPR') & (data[:, 2] == 'u'), :][:, [0, 5]].astype(float)
-    qp3_unif = data[(data[:, 4] == 'QP3') & (data[:, 2] == 'u'), :][:, [0, 5]].astype(float)
-    qpr_norm = data[(data[:, 4] == 'QPR') & (data[:, 2] == 'n'), :][:, [0, 5]].astype(float)
-    qp3_norm = data[(data[:, 4] == 'QP3') & (data[:, 2] == 'n'), :][:, [0, 5]].astype(float)
-
-    ratu = qp3_unif[:, 1] / qpr_unif[:, 1]
-    ratn = qp3_norm[:, 1] / qpr_norm[:, 1]
-    ratux, ratum, ratus = mean_stddev(qp3_unif[:, 0], ratu)
-    ratnx, ratnm, ratns = mean_stddev(qp3_norm[:, 0], ratn)
-    plt.errorbar(ratux, ratum, yerr=ratus)
-    plt.errorbar(ratnx, ratnm, yerr=ratns)
-    plt.legend(['QP3 / QPR : uniform', 'QP3 / QPR : normal'])
-    plt.show()
-
-
-def effective_gflops_square(sizes, times):
-    num = (sizes * 1e-3)**3
-    num *= 4/3
-    gflops = num / (times/1000)
-    return gflops
-
-
-def plot_flop_rates():
-    data = read_data()
-
-    qrf = data[data[:, 4] == 'QRF', :][:, [0, 5]].astype(float)
-    qrfx, qrfm, _ = mean_stddev(qrf[:, 0], qrf[:, 1])
-    qp3 = data[data[:, 4] == 'QP3', :][:, [0, 5]].astype(float)
-    qp3x, qp3m, _ = mean_stddev(qp3[:, 0], qp3[:, 1])
-    qpr = data[data[:, 4] == 'QPR', :][:, [0, 5]].astype(float)
-    qprx, qprm, _ = mean_stddev(qpr[:, 0], qpr[:, 1])
-    plt.plot(qrfx, effective_gflops_square(qrfx, qrfm), c='b')
-    plt.plot(qprx, effective_gflops_square(qprx, qprm), c='k')
-    plt.plot(qp3x, effective_gflops_square(qp3x, qp3m), c='r')
-    plt.legend(['QRF', 'QPR', 'QP3'])
-    plt.ylabel('GFlops')
     plt.xlabel('n')
+    plt.ylabel('seconds')
+    plt.title(f'Runtime: XPS 9300, MKL, {threads} threads')
+    plt.show()
+
+
+def plot_speedups(threads):
+    data = helpers.read_exp1_data('xps', threads)
+    ratf, ratr = helpers.exp1_ratio_means_and_stddevs(data)
+    plt.errorbar(ratf[0], ratf[1], yerr=ratf[2], c='b')
+    plt.errorbar(ratr[0], ratr[1], yerr=ratr[2], c='k')
+    plt.ylim(ymin=0)
+    plt.xlabel('n')
+    plt.ylabel('(QP3 time) / (alg time)')
+    plt.title(f'Speedups over QP3: XPS 9300, MKL, {threads} threads')
+    plt.show()
+
+
+def plot_flop_rates(threads):
+    data = helpers.read_exp1_data('xps', threads)
+    qrf, qp3, qpr = helpers.exp1_floprates_means_and_stddevs(data)
+    plt.errorbar(qrf[0], qrf[1], yerr=qrf[2], c='b')
+    plt.errorbar(qpr[0], qpr[1], yerr=qpr[2], c='k')
+    plt.errorbar(qp3[0], qp3[1], yerr=qp3[2], c='r')
+    plt.legend(['QRF', 'QPR', 'QP3'])
+    plt.ylim(ymin=0)
+    plt.xlabel('n')
+    plt.ylabel('Standardized GFlops')
+    plt.title(f'Flop rates: XPS 9300, MKL, {threads} threads')
     plt.show()
     pass
 
 
+def plot_speedups_and_rates(threads):
+    data = helpers.read_exp1_data('xps', threads)
+
+    scale = 1.75
+    fig, axs = plt.subplots(2, dpi=400, figsize=(4*scale, 3*scale), sharex=True)
+
+    qrf, qp3, qpr = helpers.exp1_floprates_means_and_stddevs(data)
+    axs[1].errorbar(qrf[0], qrf[1], yerr=qrf[2], c='b')
+    axs[1].errorbar(qpr[0], qpr[1], yerr=qpr[2], c='k')
+    axs[1].errorbar(qp3[0], qp3[1], yerr=qp3[2], c='r')
+    axs[1].legend(['QRF', 'QPR', 'QP3'], fontsize='small')
+    axs[1].set_ylabel('GFLOPs', fontsize='medium', labelpad=4)
+    axs[1].set_ylim(ymin=0)
+    axs[1].set_xlabel('n')
+    axs[1].grid(alpha=0.25, linestyle='--')
+    #axs[1].set_title('Flop rates (standardized)')
+
+    ratf, ratr = helpers.exp1_ratio_means_and_stddevs(data)
+    axs[0].errorbar(ratf[0], ratf[1], yerr=ratf[2], c='b')
+    axs[0].errorbar(ratr[0], ratr[1], yerr=ratr[2], c='k')
+    axs[0].legend(['QRF', 'QPR'], fontsize='small')
+    axs[0].set_ylim(ymin=0)
+    axs[0].set_ylabel('(QP3 time) / (alg time)', fontsize='medium', labelpad=12)
+    axs[0].grid(alpha=0.25, linestyle='--')
+    #axs[0].set_title('Speedup relative to classical pivoting (QP3)')
+
+    fig.suptitle('XPS 9300: MKL, 4 threads', y=0.95, fontsize='x-large')
+    fig.savefig('xps_4threads_fig.pdf')
+    fig.show()
+
+
 if __name__ == '__main__':
-    plot_times()
-    plot_flop_rates()
+    #plot_speedups(4)
+    #plot_flop_rates(4)
+    plot_speedups_and_rates(4)
