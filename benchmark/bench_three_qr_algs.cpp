@@ -18,8 +18,6 @@ using std::chrono::duration_cast;
 using std::chrono::duration;
 using std::chrono::milliseconds;
 
-// ============================================================================
-// Declaration of local prototypes.
 
 double time_dgeqrx(int64_t m_A, int64_t n_A, double *buff_A, char x)
 {

@@ -367,7 +367,7 @@ void dgeqpr( int64_t * m, int64_t * n, double * A, int64_t * lda, int64_t * jpvt
     return;
   }
 
-  // Use LAPACK's DGEQPF or DGEQP3 for small matrices.
+  // Use LAPACK's DGEQP3 for small matrices.
   if( mn_A < THRESHOLD_FOR_DGEQP3 ) {
     //// printf( "Calling dgeqp3\n" );
     _LAPACK_dgeqp3( m_A,
@@ -381,7 +381,7 @@ void dgeqpr( int64_t * m, int64_t * n, double * A, int64_t * lda, int64_t * jpvt
   for( j = 0; j < n_A; j++ ) {
     if( jpvt[ j ] != 0 ) {
       if( j != num_fixed_cols ) {
-        printf( "Swapping columns: %d %d \n", (int) j, (int) num_fixed_cols );
+        /// printf( "Swapping columns: %d %d \n", (int) j, (int) num_fixed_cols );
         blas::swap( m_A, & A[ 0 + j              * ldim_A ], i_one, 
                          & A[ 0 + num_fixed_cols * ldim_A ], i_one );
         jpvt[ j ] = jpvt[ num_fixed_cols ];
@@ -406,15 +406,11 @@ void dgeqpr( int64_t * m, int64_t * n, double * A, int64_t * lda, int64_t * jpvt
     iws = max( iws, ( int64_t ) work[ 0 ] );
     if( num_factorized_fixed_cols < n_A ) {
       n_rest = n_A - num_factorized_fixed_cols;
-
-      //char side_ = blas::side2char(blas::Side::Left);
-      //char trans_ = blas::op2char(lapack::Op::Trans);
-      _LAPACK_dormqr(blas::Side::Left, lapack::Op::Trans,
-               m_A, n_rest, num_factorized_fixed_cols,
-               A, ldim_A, tau,
-               & A[ 0 + num_factorized_fixed_cols * ldim_A ], ldim_A, 
-               work, lwork, info
-               );
+      _LAPACK_dormqr( blas::Side::Left, lapack::Op::Trans,
+                      m_A, n_rest, num_factorized_fixed_cols,
+                      A, ldim_A, tau,
+                      & A[ 0 + num_factorized_fixed_cols * ldim_A ], ldim_A, 
+                      work, lwork, info);
       if( * info != 0 ) {
         fprintf( stderr, "ERROR in dormqr: Info: %d \n", (int) (*info ));
       }
@@ -558,7 +554,6 @@ int64_t hqrrp( int64_t m_A, int64_t n_A, double * buff_A, int64_t ldim_A,
   double  d_one  = 1.0;
 
   // Executable Statements.
-  //// printf( "%% hqrrp.\n" );
 
   // Check arguments.
   if( m_A < 0 ) {
@@ -608,8 +603,6 @@ int64_t hqrrp( int64_t m_A, int64_t n_A, double * buff_A, int64_t ldim_A,
 
   // Initialize matrices G and Y.
   NoFLA_Normal_random_matrix( nb_alg + pp, m_A, buff_G, ldim_G );
-  //// FLA_Gemm( FLA_NO_TRANSPOSE, FLA_NO_TRANSPOSE, 
-  ////           FLA_ONE, G, A, FLA_ZERO, Y );
   blas::gemm(blas::Layout::ColMajor,
              blas::Op::NoTrans, blas::Op::NoTrans, m_Y, n_Y, m_A, 
              d_one, buff_G,  ldim_G, buff_A, ldim_A, 
@@ -699,16 +692,15 @@ int64_t hqrrp( int64_t m_A, int64_t n_A, double * buff_A, int64_t ldim_A,
 
     if( last_iter == 0 ) {
       // Compute QRP of YR, and apply permutations to matrix AR.
-      // A copy of YR is made int64_to VR, and permutations are applied to YR.
-      //// FLA_Merge_2x1( ATR,
-      ////                ABR,   & AR );
-      //// FLA_Copy( YR, VR );
-      //// FLA_QRPmod_WY_unb_var4( 1, bRow, VR, pB, sB, 1, AR, 1, YR, 0, None );
-      char matrixtype_ = matrixtype2char( lapack::MatrixType::General );
-      lapack::lacpy( lapack::MatrixType::General, m_V, n_VR, buff_YR, ldim_Y,
-                                     buff_VR, ldim_V);
+      // A copy of YR is made into VR, and permutations are applied to YR.
+      lapack::lacpy( lapack::MatrixType::General,
+                     m_V, n_VR,
+                     buff_YR, ldim_Y,
+                     buff_VR, ldim_V);
       NoFLA_QRPmod_WY_unb_var4( 1, b,
-          m_V, n_VR, buff_VR, ldim_V, buff_pB, buff_sB,
+          m_V, n_VR,
+          buff_VR, ldim_V,
+          buff_pB, buff_sB,
           1, m_A, buff_AR, ldim_A,
           1, m_Y, buff_YR, ldim_Y,
           0, buff_Y, ldim_Y );
@@ -718,12 +710,6 @@ int64_t hqrrp( int64_t m_A, int64_t n_A, double * buff_A, int64_t ldim_A,
     // Compute QRP of panel AB1 = [ A11; A21 ].
     // Apply same permutations to A01 and Y1, and build T1_T.
     //
-    //// FLA_Part_2x1( W1,   & T1_T,
-    ////                     & None,    b, FLA_TOP );
-    //// FLA_Merge_2x1( A11,
-    ////                A21,   & AB1 );
-    //// FLA_QRPmod_WY_unb_var4( panel_pivoting, -1, AB1, p1, s1, 
-    ////                         1, A01, 1, Y1, 1, T1_T );
 
     NoFLA_QRPmod_WY_unb_var4( panel_pivoting, -1,
         m_AB1, n_AB1, buff_AB1, ldim_A, buff_p1, buff_s1,
@@ -740,8 +726,6 @@ int64_t hqrrp( int64_t m_A, int64_t n_A, double * buff_A, int64_t ldim_A,
       //   / A12 \ := QB1' / A12 \
       //   \ A22 /         \ A22 /
       // where QB1 is formed from AB1 and T1_T.
-      //// MyFLA_Apply_Q_WY_lhfc_blk_var4( A11, A21, T1_T, A12, A22 );
-
       NoFLA_Apply_Q_WY_lhfc_blk_var4( 
           m_A11 + m_A21, n_A11, buff_A11, ldim_A,
           b, b, buff_T1_T, ldim_W,
@@ -752,8 +736,6 @@ int64_t hqrrp( int64_t m_A, int64_t n_A, double * buff_A, int64_t ldim_A,
     // Downdate matrix Y.
     //
     if ( ! last_iter ) {
-      //// MyFLA_Downdate_Y( A11, A21, A12, T1_T, Y2, G1, G2 );
-
       NoFLA_Downdate_Y(
           m_A11, n_A11, buff_A11, ldim_A,
           m_A21, n_A21, buff_A21, ldim_A,
@@ -766,10 +748,6 @@ int64_t hqrrp( int64_t m_A, int64_t n_A, double * buff_A, int64_t ldim_A,
   }
 
   // Remove auxiliary objects.
-  //// FLA_Obj_free( & G );
-  //// FLA_Obj_free( & Y );
-  //// FLA_Obj_free( & V );
-  //// FLA_Obj_free( & W );
   free( buff_G );
   free( buff_Y );
   free( buff_V );
@@ -846,21 +824,15 @@ static int64_t NoFLA_Downdate_Y(
   int64_t    ldim_B      = m_G1;
 
   // Create object B.
-  //// FLA_Obj_create_conf_to( FLA_NO_TRANSPOSE, G1, & B );
   buff_B = ( double * ) malloc( m_B * n_B * sizeof( double ) );
 
   // B = G1.
-  //// FLA_Copy( G1, B );
-  char matrixtype_ = lapack::matrixtype2char( lapack::MatrixType::General );
-  lapack::lacpy(lapack::MatrixType::General, m_G1, n_G1,
-                              buff_G1, ldim_G1,
-                              buff_B, ldim_B
-                );
+  lapack::lacpy( lapack::MatrixType::General,
+                 m_G1, n_G1,
+                 buff_G1, ldim_G1,
+                 buff_B, ldim_B )  ;
 
   // B = B * U11.
-  //// FLA_Trmm( FLA_RIGHT, FLA_LOWER_TRIANGULAR,
-  ////           FLA_NO_TRANSPOSE, FLA_UNIT_DIAG,
-  ////           FLA_ONE, U11, B );
   blas::trmm( blas::Layout::ColMajor,
               blas::Side::Right, 
               blas::Uplo::Lower,
@@ -869,20 +841,12 @@ static int64_t NoFLA_Downdate_Y(
               d_one, buff_U11, ldim_U11, buff_B, ldim_B );
 
   // B = B + G2 * U21.
-  //// FLA_Gemm( FLA_NO_TRANSPOSE, FLA_NO_TRANSPOSE,
-  ////           FLA_ONE, G2, U21, FLA_ONE, B );
   blas::gemm( blas::Layout::ColMajor,
               blas::Op::NoTrans, blas::Op::NoTrans, m_B, n_B, m_U21,
               d_one, buff_G2, ldim_G2, buff_U21, ldim_U21,
               d_one, buff_B,  ldim_B );
 
   // B = B * T11.
-  //// FLA_Trsm( FLA_RIGHT, FLA_UPPER_TRIANGULAR,
-  ////           FLA_NO_TRANSPOSE, FLA_NONUNIT_DIAG,
-  ////           FLA_ONE, T, B );
-  //// dtrsm_( "Right", "Upper", "No transpose", "Non-unit", & m_B, & n_B,
-  ////         & d_one, buff_T, & ldim_T, buff_B, & ldim_B );
-  // Used dtrmm instead of dtrsm because of using compact WY instead of UT.
   blas::trmm( blas::Layout::ColMajor,
               blas::Side::Right,
               blas::Uplo::Upper,
@@ -891,9 +855,6 @@ static int64_t NoFLA_Downdate_Y(
               d_one, buff_T, ldim_T, buff_B, ldim_B );
 
   // B = - B * U11^H.
-  //// FLA_Trmm( FLA_RIGHT, FLA_LOWER_TRIANGULAR,
-  ////           FLA_CONJ_TRANSPOSE, FLA_UNIT_DIAG,
-  ////           FLA_MINUS_ONE, U11, B );
   blas::trmm( blas::Layout::ColMajor,
               blas::Side::Right,
               blas::Uplo::Lower,
@@ -902,7 +863,6 @@ static int64_t NoFLA_Downdate_Y(
               d_minus_one, buff_U11, ldim_U11, buff_B, ldim_B );
 
   // B = G1 + B.
-  //// FLA_Axpy( FLA_ONE, G1, B );
   for( j = 0; j < n_B; j++ ) {
     for( i = 0; i < m_B; i++ ) {
       buff_B[ i + j * ldim_B ] += buff_G1[ i + j * ldim_G1 ];
@@ -910,8 +870,6 @@ static int64_t NoFLA_Downdate_Y(
   }
 
   // Y2 = Y2 - B * R12.
-  //// FLA_Gemm( FLA_NO_TRANSPOSE, FLA_NO_TRANSPOSE,
-  ////           FLA_MINUS_ONE, B, A12, FLA_ONE, Y2 );
   blas::gemm( blas::Layout::ColMajor,
               blas::Op::NoTrans,
               blas::Op::NoTrans, m_Y2, n_Y2, m_A12,
@@ -927,7 +885,6 @@ static int64_t NoFLA_Downdate_Y(
           m_G1, n_G1 + n_G2, buff_G1, ldim_G1 );
 
   // Remove object B.
-  //// FLA_Obj_free( & B );
   free( buff_B );
 
   return 0;
