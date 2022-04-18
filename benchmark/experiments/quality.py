@@ -21,9 +21,18 @@ def simple(spectrum, seed=0):
     os.system(command_string)
 
 
-def polydecay_exp1():
-    n = 5000
-    spectrum = polynomial_decay(500, 1.5, n)
+def run_polydecay_exp1():
+    filename = 'polydecay_exp1.csv'
+    run_polydecay_generic(500, 1.5, 5000, filename)
+
+
+def run_polydecay_exp2():
+    filename = 'polydecay_exp2.csv'
+    run_polydecay_generic(1000, 4, 5000, filename)
+
+
+def run_polydecay_generic(eff_rank, p, n, filename):
+    spectrum = polynomial_decay(eff_rank, p, n)
     spec_string = str([s for s in spectrum])[1:-1]
     spec_string.replace(',', ' ')
     cwd = os.getcwd()
@@ -32,13 +41,19 @@ def polydecay_exp1():
     for i in range(trials):
         seed = i*(n**2)
         command_string = base_command_string % (str(seed), 'R')
-        command_string += ' >> quality_log/polydecay_exp1.csv'
+        command_string += f' >> quality_log/{filename}'
         subprocess.run(command_string, shell=True)
         command_string = base_command_string % (str(seed), 'D')
-        command_string += ' >> quality_log/polydecay_exp1.csv'
+        command_string += f' >> quality_log/{filename}'
         subprocess.run(command_string, shell=True)
         print(f'Done with step {i + 1} of {trials}')
 
 
 if __name__ == '__main__':
-    polydecay_exp1()
+    """
+    from matplotlib import pyplot as plt
+    data = np.genfromtxt('quality_log/polydecay_exp1.csv', delimiter=',')
+    qpr = data[::2, :]
+    qp3 = data[1::2, :]
+    """
+    run_polydecay_exp2()
