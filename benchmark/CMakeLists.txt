@@ -62,5 +62,19 @@ target_link_libraries(
 )
 
 
+set(
+    bench_quality_cxx
+    bench_quality.cpp
+)
+add_executable(
+    bench_quality ${bench_quality_cxx}
+)
+target_include_directories(
+    bench_quality PUBLIC ${Random123_DIR}
+)
+target_link_libraries(
+    bench_quality PUBLIC hqrrp blaspp lapackpp
+)
+
 
 # cmake -DCMAKE_BINARY_DIR=`pwd` -Dhqrrp_DIR=`pwd`/../../hqrrp-install/lib/cmake -DRandom123_DIR=/opt/random123/include ..
