@@ -1,6 +1,7 @@
 import numpy as np
 import os
 import subprocess
+from matplotlib import pyplot as plt
 
 
 def polynomial_decay(eff_rank, power, n):
@@ -31,6 +32,14 @@ def run_polydecay_exp2():
     run_polydecay_generic(1000, 4, 5000, filename)
 
 
+def read_polydecay_exp2():
+    spectrum = polynomial_decay(1000, 4, 5000)
+    data = np.genfromtxt('quality_log/polydecay_exp2.csv', delimiter=',')
+    qpr = data[::2, :]
+    qp3 = data[1::2, :]
+    return spectrum, qpr, qp3
+
+
 def run_polydecay_generic(eff_rank, p, n, filename):
     spectrum = polynomial_decay(eff_rank, p, n)
     spec_string = str([s for s in spectrum])[1:-1]
@@ -50,10 +59,37 @@ def run_polydecay_generic(eff_rank, p, n, filename):
 
 
 if __name__ == '__main__':
-    """
-    from matplotlib import pyplot as plt
-    data = np.genfromtxt('quality_log/polydecay_exp1.csv', delimiter=',')
-    qpr = data[::2, :]
-    qp3 = data[1::2, :]
-    """
-    run_polydecay_exp2()
+    s, qpr, qp3 = read_polydecay_exp2()
+    scale = 1.5
+
+    h = plt.figure(dpi=400, figsize=(5*scale, 3*scale))
+    cx = h.add_subplot()
+    cx.semilogy(s, c='b', linewidth=1)
+    cx.set_ylabel('sigma[k]', fontsize='medium')
+    cx.set_xlabel('k', fontsize='medium')
+    cx.grid(alpha=0.25, linestyle='--')
+    h.savefig('quality_singvals.pdf')
+    h.show()
+
+    f = plt.figure(dpi=400, figsize=(5*scale, 3*scale))
+    ax = f.add_subplot()
+    for i in range(10):
+        ax.semilogy(qpr[i, :], c='k', alpha=0.2, linewidth=1)
+        ax.semilogy(qp3[i, :], c='r', alpha=0.2, linewidth=1)
+    ax.semilogy(s, c='b', alpha=0.0, linewidth=1)
+    ax.set_xlabel('k', fontsize='medium')
+    ax.set_ylabel('R[k, k]', fontsize='medium')
+    ax.grid(alpha=0.25, linestyle='--')
+    f.savefig('quality_diag_r.pdf')
+    f.show()
+
+    g = plt.figure(dpi=400, figsize=(5*scale, 3*scale))
+    bx = g.add_subplot()
+    for i in range(10):
+        bx.plot(qpr[i, :] / s, c='k', alpha=0.25, linewidth=1)
+        bx.plot(qp3[i, :] / s, c='r', alpha=0.25, linewidth=1)
+    bx.set_ylabel('R[k,k] / sigma[k]')
+    bx.set_xlabel('k', fontsize='medium')
+    bx.grid(alpha=0.25, linestyle='--')
+    g.savefig('quality_singval_est_rats.pdf')
+    g.show()
