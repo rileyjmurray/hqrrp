@@ -62,6 +62,7 @@ if __name__ == '__main__':
     s, qpr, qp3 = read_polydecay_exp2()
     scale = 1.5
 
+    """
     h = plt.figure(dpi=400, figsize=(5*scale, 3*scale))
     cx = h.add_subplot()
     cx.semilogy(s, c='b', linewidth=1)
@@ -70,19 +71,21 @@ if __name__ == '__main__':
     cx.grid(alpha=0.25, linestyle='--')
     h.savefig('quality_singvals.pdf')
     h.show()
+    """
 
     f = plt.figure(dpi=400, figsize=(5*scale, 3*scale))
     ax = f.add_subplot()
     for i in range(10):
         ax.semilogy(qpr[i, :], c='k', alpha=0.2, linewidth=1)
         ax.semilogy(qp3[i, :], c='r', alpha=0.2, linewidth=1)
-    ax.semilogy(s, c='b', alpha=0.0, linewidth=1)
+    ax.semilogy(s, color='xkcd:gold', alpha=1.0, linewidth=1)
     ax.set_xlabel('k', fontsize='medium')
     ax.set_ylabel('R[k, k]', fontsize='medium')
     ax.grid(alpha=0.25, linestyle='--')
     f.savefig('quality_diag_r.pdf')
     f.show()
 
+    """
     g = plt.figure(dpi=400, figsize=(5*scale, 3*scale))
     bx = g.add_subplot()
     for i in range(10):
@@ -93,3 +96,4 @@ if __name__ == '__main__':
     bx.grid(alpha=0.25, linestyle='--')
     g.savefig('quality_singval_est_rats.pdf')
     g.show()
+    """
