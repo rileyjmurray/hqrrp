@@ -137,7 +137,7 @@ void _LAPACK_dgeqp3(
   }
   lapack_int *lwork_ = (lapack_int *) lwork;
   lapack_int *info_ = (lapack_int *) info;
-  LAPACK_dgeqrf(&m_, &n_, A, &lda_, tau, work, lwork_, info_);
+  LAPACK_dgeqp3(&m_, &n_, A, &lda_, jpvt_, tau, work, lwork_, info_);
   for (int64_t i = 0; i < n; ++i)
   {
     jpvt[i] = (int64_t) jpvt[i];
