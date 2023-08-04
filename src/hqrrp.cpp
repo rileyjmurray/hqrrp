@@ -55,7 +55,7 @@ namespace HQRRP {
 
 // Matrices with dimensions larger than THRESHOLD_FOR_DGEQP3 are processed 
 // with the new HQRRP code.
-#define THRESHOLD_FOR_DGEQP3  3
+#define THRESHOLD_FOR_DGEQP3  2
 
 // ============================================================================
 // Definition of macros.
@@ -159,6 +159,7 @@ void _LAPACK_dgeqrf(
   lapack_int *info_ = (lapack_int *) info;
   LAPACK_dgeqrf(&m_, &n_, A, &lda_, tau, work, lwork_, info_);
   *info = (int64_t) *info_;
+  *lwork = (int64_t) *lwork_;
   return;
 }
 
@@ -439,7 +440,7 @@ void dgeqpr( int64_t * m, int64_t * n, double * A, int64_t * lda, int64_t * jpvt
             ldim_A,
         & jpvt[ num_factorized_fixed_cols ], 
         & tau[ num_factorized_fixed_cols ],
-        64, 10, panel );
+        16, 16, panel );
   }
 
   // Pivot block above factorized block by NoFLA_HQRRP.
@@ -967,58 +968,64 @@ static int64_t GEQRF_QRmod_WY_unb_var4( int64_t num_stages,
 // Simplification of NoFLA_QRPmod_WY_unb_var4 for the case when pivoting=0.
 // (I don't know what the "var4" signifies in that function name ...).
 //
-  int64_t     j, mn_A, m_a21, m_A22, n_A22, n_dB,
-          n_house_vector, m_rest;
+  int64_t j, mn_A, m_a21, m_A22, n_A22,
+          n_house_vector, m_rest, * info;
+  int64_t i_neg_one = -1;
   double  * buff_workspace, diag;
-
 
   // Some initializations.
   mn_A    = min( m_A, n_A );
   if( num_stages < 0 )
     num_stages = mn_A;
-  buff_workspace = ( double * ) malloc( n_A * sizeof( double ) );
+  
+  double work_query[1];
+  int64_t lwork[1];
+  lwork[0] = -1;
+  _LAPACK_dgeqrf(m_A, n_A, buff_A, ldim_A, buff_t, work_query, lwork, info);
+  lwork[0] = max((int64_t) blas::real(work_query[0]), n_A);
+  buff_workspace = ( double * ) malloc( lwork[0] * sizeof( double ) );
+  _LAPACK_dgeqrf(m_A, n_A, buff_A, ldim_A, buff_t, buff_workspace, lwork, info);
 
-  // Main Loop.
-  for( j = 0; j < num_stages; j++ ) {
-    n_dB  = n_A - j;
-    m_a21 = m_A - j - 1;
-    m_A22 = m_A - j - 1;
-    n_A22 = n_A - j - 1;
+  // // Main Loop.
+  // for( j = 0; j < num_stages; j++ ) {
+  //   m_a21 = m_A - j - 1;
+  //   m_A22 = m_A - j - 1;
+  //   n_A22 = n_A - j - 1;
 
-    // Compute tau1 and u21 from alpha11 and a21 such that tau1 and u21
-    // determine a Householder transform H such that applying H from the
-    // left to the column vector consisting of alpha11 and a21 annihilates
-    // the entries in a21 (and updates alpha11).
-    n_house_vector = m_a21 + 1;
-    lapack::larfg(n_house_vector,
-        & buff_A[ j + j * ldim_A ],
-        & buff_A[ min( m_A-1, j+1 ) + j * ldim_A ],
-        1,
-        & buff_t[j]
-    );
+  //   // Compute tau1 and u21 from alpha11 and a21 such that tau1 and u21
+  //   // determine a Householder transform H such that applying H from the
+  //   // left to the column vector consisting of alpha11 and a21 annihilates
+  //   // the entries in a21 (and updates alpha11).
+  //   n_house_vector = m_a21 + 1;
+  //   lapack::larfg(n_house_vector,
+  //       & buff_A[ j + j * ldim_A ],
+  //       & buff_A[ min( m_A-1, j+1 ) + j * ldim_A ],
+  //       1,
+  //       & buff_t[j]
+  //   );
 
-    // / a12t \ =  H / a12t \
-    // \ A22  /      \ A22  /
-    //
-    // where H is formed from tau1 and u21.
-    diag = buff_A[ j + j * ldim_A ];
-    buff_A[ j + j * ldim_A ] = 1.0;
-    m_rest = m_A22 + 1;
-    _LAPACK_dlarf( lapack::Side::Left, m_rest, n_A22, 
-        & buff_A[ j + j * ldim_A ], 1,
-        buff_t[ j ],
-        & buff_A[ j + ( j+1 ) * ldim_A ], ldim_A,
-        buff_workspace
-    );
-    buff_A[ j + j * ldim_A ] = diag;
+  //   // / a12t \ =  H / a12t \
+  //   // \ A22  /      \ A22  /
+  //   //
+  //   // where H is formed from tau1 and u21.
+  //   diag = buff_A[ j + j * ldim_A ];
+  //   buff_A[ j + j * ldim_A ] = 1.0;
+  //   m_rest = m_A22 + 1;
+  //   _LAPACK_dlarf( lapack::Side::Left, m_rest, n_A22, 
+  //       & buff_A[ j + j * ldim_A ], 1,
+  //       buff_t[ j ],
+  //       & buff_A[ j + ( j+1 ) * ldim_A ], ldim_A,
+  //       buff_workspace
+  //   );
+  //   buff_A[ j + j * ldim_A ] = diag;
+  // }
 
-    // Build T.
-    if( build_T ) {
-      lapack::larft( lapack::Direction::Forward,
-                    lapack::StoreV::Columnwise,
-                    m_A, num_stages, buff_A, ldim_A, 
-                    buff_t, buff_T, ldim_T);
-    }
+  // Build T.
+  if( build_T ) {
+    lapack::larft( lapack::Direction::Forward,
+                  lapack::StoreV::Columnwise,
+                  m_A, num_stages, buff_A, ldim_A, 
+                  buff_t, buff_T, ldim_T);
   }
   // Remove auxiliary vectors.
   free( buff_workspace );
@@ -1039,18 +1046,27 @@ static int64_t NoFLA_QRPmod_WY_unb_var4( int64_t pivoting, int64_t num_stages,
 // optionally built.
 //
 // Arguments:
+//
 // "pivoting": If pivoting==1, then QR factorization with pivoting is used.
+//
 // "numstages": It tells the number of columns that are factorized.
 //   If "num_stages" is negative, the whole matrix A is factorized.
 //   If "num_stages" is positive, only the first "num_stages" are factorized.
+//   The typical use-case for this function is to call with num_stages=-1.
+//   Calling with num_stages > 0 only happens at HQRRP's last iteration.
+//
 // "pivot_B": if "pivot_B" is true, matrix "B" is pivoted too.
+//
 // "pivot_C": if "pivot_C" is true, matrix "C" is pivoted too.
+//
 // "build_T": if "build_T" is true, matrix "T" is built.
+//    The typical use-case for this function is to call with build_T=true.
+//    Calling with build_T=false is only done at HQRRP's last iteration.
 //
 
-if (pivoting == 0) {
-  return GEQRF_QRmod_WY_unb_var4(num_stages, m_A, n_A, buff_A, ldim_A, buff_t, build_T, buff_T, ldim_T);
-}
+  if (pivoting == 0) {
+    return GEQRF_QRmod_WY_unb_var4(num_stages, m_A, n_A, buff_A, ldim_A, buff_t, build_T, buff_T, ldim_T);
+  }
 
   int64_t j, mn_A, m_a21, m_A22, n_A22, n_dB, idx_max_col, 
           i_one = 1, n_house_vector, m_rest;
