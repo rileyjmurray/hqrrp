@@ -271,7 +271,7 @@ void _LAPACK_dlarf(
 
 // ============================================================================
 void dgeqpr( int64_t * m, int64_t * n, double * A, int64_t * lda, int64_t * jpvt, double * tau,
-        double * work, int64_t * lwork, int64_t * info ) {
+        double * work, int64_t * lwork, int64_t * info, int64_t panel ) {
 // 
 // This routine is plug compatible with LAPACK's routine dgeqp3.
 // It computes the new HQRRP while keeping the same header as LAPACK's dgeqp3.
@@ -439,7 +439,7 @@ void dgeqpr( int64_t * m, int64_t * n, double * A, int64_t * lda, int64_t * jpvt
             ldim_A,
         & jpvt[ num_factorized_fixed_cols ], 
         & tau[ num_factorized_fixed_cols ],
-        64, 10, 1 );
+        64, 10, panel );
   }
 
   // Pivot block above factorized block by NoFLA_HQRRP.
@@ -478,7 +478,7 @@ void dgeqpr( int64_t * m, int64_t * n, double * A, int64_t * lda, int64_t * jpvt
 }
 
 
-void dgeqpr(int64_t m, int64_t n, double *A, int64_t lda, int64_t *jpvt, double *tau)
+void dgeqpr(int64_t m, int64_t n, double *A, int64_t lda, int64_t *jpvt, double *tau, int64_t panel = 1)
 {
   // This function is compatible with LAPACK++'s geqp3, provided the matrix A is 
   // double precision.
@@ -486,14 +486,14 @@ void dgeqpr(int64_t m, int64_t n, double *A, int64_t lda, int64_t *jpvt, double 
   int64_t lwork = -1;
   double *buff_wk_qp4 = (double *) malloc( sizeof( double ) );
   dgeqpr( & m, & n, A, & lda, jpvt, tau, 
-          buff_wk_qp4, & lwork, &info );
+          buff_wk_qp4, & lwork, &info, panel);
   if (info != 0) throw lapack::Error();
 
   lwork = (int64_t) *buff_wk_qp4;
   free(buff_wk_qp4);
   buff_wk_qp4 = ( double * ) malloc( lwork * sizeof( double ) );
   dgeqpr( & m, & n, A, & lda, jpvt, tau, 
-          buff_wk_qp4, & lwork, &info );
+          buff_wk_qp4, & lwork, &info, panel);
   if (info != 0) throw lapack::Error();
   
   free(buff_wk_qp4);
@@ -958,6 +958,74 @@ static int64_t NoFLA_Apply_Q_WY_rnfc_blk_var4(
   return 0;
 }
 
+// ==========================================================================
+static int64_t GEQRF_QRmod_WY_unb_var4( int64_t num_stages,
+	       int64_t m_A, int64_t n_A, double * buff_A, int64_t ldim_A,
+	       double * buff_t,
+	       int64_t build_T, double * buff_T, int64_t ldim_T ) {
+//
+// Simplification of NoFLA_QRPmod_WY_unb_var4 for the case when pivoting=0.
+// (I don't know what the "var4" signifies in that function name ...).
+//
+  int64_t     j, mn_A, m_a21, m_A22, n_A22, n_dB,
+          n_house_vector, m_rest;
+  double  * buff_workspace, diag;
+
+
+  // Some initializations.
+  mn_A    = min( m_A, n_A );
+  if( num_stages < 0 )
+    num_stages = mn_A;
+  buff_workspace = ( double * ) malloc( n_A * sizeof( double ) );
+
+  // Main Loop.
+  for( j = 0; j < num_stages; j++ ) {
+    n_dB  = n_A - j;
+    m_a21 = m_A - j - 1;
+    m_A22 = m_A - j - 1;
+    n_A22 = n_A - j - 1;
+
+    // Compute tau1 and u21 from alpha11 and a21 such that tau1 and u21
+    // determine a Householder transform H such that applying H from the
+    // left to the column vector consisting of alpha11 and a21 annihilates
+    // the entries in a21 (and updates alpha11).
+    n_house_vector = m_a21 + 1;
+    lapack::larfg(n_house_vector,
+        & buff_A[ j + j * ldim_A ],
+        & buff_A[ min( m_A-1, j+1 ) + j * ldim_A ],
+        1,
+        & buff_t[j]
+    );
+
+    // / a12t \ =  H / a12t \
+    // \ A22  /      \ A22  /
+    //
+    // where H is formed from tau1 and u21.
+    diag = buff_A[ j + j * ldim_A ];
+    buff_A[ j + j * ldim_A ] = 1.0;
+    m_rest = m_A22 + 1;
+    _LAPACK_dlarf( lapack::Side::Left, m_rest, n_A22, 
+        & buff_A[ j + j * ldim_A ], 1,
+        buff_t[ j ],
+        & buff_A[ j + ( j+1 ) * ldim_A ], ldim_A,
+        buff_workspace
+    );
+    buff_A[ j + j * ldim_A ] = diag;
+
+    // Build T.
+    if( build_T ) {
+      lapack::larft( lapack::Direction::Forward,
+                    lapack::StoreV::Columnwise,
+                    m_A, num_stages, buff_A, ldim_A, 
+                    buff_t, buff_T, ldim_T);
+    }
+  }
+  // Remove auxiliary vectors.
+  free( buff_workspace );
+
+  return 0;
+}
+
 // ============================================================================
 static int64_t NoFLA_QRPmod_WY_unb_var4( int64_t pivoting, int64_t num_stages, 
                int64_t m_A, int64_t n_A, double * buff_A, int64_t ldim_A,
@@ -979,7 +1047,12 @@ static int64_t NoFLA_QRPmod_WY_unb_var4( int64_t pivoting, int64_t num_stages,
 // "pivot_C": if "pivot_C" is true, matrix "C" is pivoted too.
 // "build_T": if "build_T" is true, matrix "T" is built.
 //
-  int64_t     j, mn_A, m_a21, m_A22, n_A22, n_dB, idx_max_col, 
+
+if (pivoting == 0) {
+  return GEQRF_QRmod_WY_unb_var4(num_stages, m_A, n_A, buff_A, ldim_A, buff_t, build_T, buff_T, ldim_T);
+}
+
+  int64_t j, mn_A, m_a21, m_A22, n_A22, n_dB, idx_max_col, 
           i_one = 1, n_house_vector, m_rest;
   double  * buff_d, * buff_e, * buff_workspace, diag;
 
@@ -998,10 +1071,8 @@ static int64_t NoFLA_QRPmod_WY_unb_var4( int64_t pivoting, int64_t num_stages,
   buff_e         = ( double * ) malloc( n_A * sizeof( double ) );
   buff_workspace = ( double * ) malloc( n_A * sizeof( double ) );
 
-  if( pivoting == 1 ) {
-    // Compute initial norms of A int64_to d and e.
-    NoFLA_QRP_compute_norms( m_A, n_A, buff_A, ldim_A, buff_d, buff_e );
-  }
+  // Compute initial norms of A int64_to d and e.
+  NoFLA_QRP_compute_norms( m_A, n_A, buff_A, ldim_A, buff_d, buff_e );
 
   // Main Loop.
   for( j = 0; j < num_stages; j++ ) {
@@ -1010,19 +1081,17 @@ static int64_t NoFLA_QRPmod_WY_unb_var4( int64_t pivoting, int64_t num_stages,
     m_A22 = m_A - j - 1;
     n_A22 = n_A - j - 1;
 
-    if( pivoting == 1 ) {
-      // Obtain the index of the column with largest 2-norm.
-      idx_max_col = blas::iamax( n_dB, & buff_d[ j ], i_one ); // - 1;
+    // Obtain the index of the column with largest 2-norm.
+    idx_max_col = blas::iamax( n_dB, & buff_d[ j ], i_one ); // - 1;
 
-      // Swap columns of A, B, C, pivots, and norms vectors.
-      NoFLA_QRP_pivot_G_B_C( idx_max_col,
-          m_A, & buff_A[ 0 + j * ldim_A ], ldim_A,
-          pivot_B, m_B, & buff_B[ 0 + j * ldim_B ], ldim_B,
-          pivot_C, m_C, & buff_C[ 0 + j * ldim_C ], ldim_C,
-          & buff_p[ j ],
-          & buff_d[ j ],
-          & buff_e[ j ] );
-    }
+    // Swap columns of A, B, C, pivots, and norms vectors.
+    NoFLA_QRP_pivot_G_B_C( idx_max_col,
+        m_A, & buff_A[ 0 + j * ldim_A ], ldim_A,
+        pivot_B, m_B, & buff_B[ 0 + j * ldim_B ], ldim_B,
+        pivot_C, m_C, & buff_C[ 0 + j * ldim_C ], ldim_C,
+        & buff_p[ j ],
+        & buff_d[ j ],
+        & buff_e[ j ] );
 
     // Compute tau1 and u21 from alpha11 and a21 such that tau1 and u21
     // determine a Householder transform H such that applying H from the
@@ -1051,14 +1120,13 @@ static int64_t NoFLA_QRPmod_WY_unb_var4( int64_t pivoting, int64_t num_stages,
     );
     buff_A[ j + j * ldim_A ] = diag;
 
-    if( pivoting == 1 ) {
-      // Update partial column norms.
-      NoFLA_QRP_downdate_partial_norms( m_A22, n_A22, 
-          & buff_d[ j+1 ], 1,
-          & buff_e[ j+1 ], 1,
-          & buff_A[ j + ( j+1 ) * ldim_A ], ldim_A,
-          & buff_A[ ( j+1 ) + min( n_A-1, ( j+1 ) ) * ldim_A ], ldim_A );
-    }
+    // Update partial column norms.
+    NoFLA_QRP_downdate_partial_norms( m_A22, n_A22, 
+        & buff_d[ j+1 ], 1,
+        & buff_e[ j+1 ], 1,
+        & buff_A[ j + ( j+1 ) * ldim_A ], ldim_A,
+        & buff_A[ ( j+1 ) + min( n_A-1, ( j+1 ) ) * ldim_A ], ldim_A );
+
   }
 
   // Build T.
