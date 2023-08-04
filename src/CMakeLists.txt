@@ -6,12 +6,24 @@ set(
 add_library(
     hqrrp ${hqrrp_cxx}
 )
+set(
+  hqrrp_cxx_opts
+  -Wall -Wextra
+)
+if (SANITIZE_ADDRESS)
+    list(APPEND hqrrp_cxx_opts -fsanitize=address)
+    target_link_options(hqrrp INTERFACE -fsanitize=address)
+endif()
 
 target_include_directories(
     hqrrp PUBLIC
     $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/include>
     $<BUILD_INTERFACE:${Random123_DIR}>
     $<INSTALL_INTERFACE:include>
+)
+
+target_compile_options(
+  hqrrp PUBLIC ${hqrrp_cxx_opts}
 )
 
 target_link_libraries(hqrrp PUBLIC blaspp lapackpp)

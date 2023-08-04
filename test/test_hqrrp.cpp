@@ -69,7 +69,7 @@ void expand_pqr(
     free(R);
 }
 
-void test_qrcp(int64_t m_A, int64_t n_A, uint64_t a_seed, bool randalg, bool verbose)
+void test_qrcp(int64_t m_A, int64_t n_A, uint64_t a_seed, bool randalg, bool verbose, int64_t panel)
 {
     #define max( a, b ) ( (a) > (b) ? (a) : (b) )
     #define min( a, b ) ( (a) < (b) ? (a) : (b) )
@@ -90,7 +90,7 @@ void test_qrcp(int64_t m_A, int64_t n_A, uint64_t a_seed, bool randalg, bool ver
     
     if (randalg)
     {
-        HQRRP::dgeqpr(m_A, n_A, buff_A, ldim_A, buff_p, buff_tau);
+        HQRRP::dgeqpr(m_A, n_A, buff_A, ldim_A, buff_p, buff_tau, panel);
     }
     else
     {
@@ -117,7 +117,6 @@ void test_qrcp(int64_t m_A, int64_t n_A, uint64_t a_seed, bool randalg, bool ver
         }    
     }
 
-    //free(buff_A);
     delete[] buff_A;
     delete[] buff_A_copy;
     free(buff_Q);
@@ -129,38 +128,38 @@ class TestExpandQRCP : public ::testing::Test
 {
     protected:
 
-    virtual void run(int64_t m_A, int64_t n_A, uint64_t a_seed)
+    virtual void run_panel_piv(int64_t m_A, int64_t n_A, uint64_t a_seed)
     {
-        test_qrcp(m_A, n_A, a_seed, false, false);
+        test_qrcp(m_A, n_A, a_seed, false, false, 1);
     }
 };
 
 TEST_F(TestExpandQRCP, Dim10by3)
 {
-    run(10, 3, 99);
-    run(10, 3, 100);
-    run(10, 3, 101);
+    run_panel_piv(10, 3, 99);
+    run_panel_piv(10, 3, 100);
+    run_panel_piv(10, 3, 101);
 }
 
 TEST_F(TestExpandQRCP, Dim4by4)
 {
-    run(4, 4, 99);
-    run(4, 4, 100);
-    run(4, 4, 101);
+    run_panel_piv(4, 4, 99);
+    run_panel_piv(4, 4, 100);
+    run_panel_piv(4, 4, 101);
 }
 
 TEST_F(TestExpandQRCP, Dim10by10)
 {
-    run(10, 10, 99);
-    run(10, 10, 100);
-    run(10, 10, 101);
+    run_panel_piv(10, 10, 99);
+    run_panel_piv(10, 10, 100);
+    run_panel_piv(10, 10, 101);
 }
 
 TEST_F(TestExpandQRCP, Dim10by100)
 {
-    run(10, 100, 99);
-    run(10, 100, 100);
-    run(10, 100, 101);
+    run_panel_piv(10, 100, 99);
+    run_panel_piv(10, 100, 100);
+    run_panel_piv(10, 100, 101);
 }
 
 
@@ -169,43 +168,83 @@ class TestHQRRP : public ::testing::Test
 {
     protected:
 
-    virtual void run(int64_t m_A, int64_t n_A, uint64_t a_seed)
+    virtual void run_rand_panel_piv(int64_t m_A, int64_t n_A, uint64_t a_seed)
     {
-        test_qrcp(m_A, n_A, a_seed, true, false);
+        test_qrcp(m_A, n_A, a_seed, true, false, 1);
+    }
+
+    virtual void run_rand_no_panel_piv(int64_t m_A, int64_t n_A, uint64_t a_seed)
+    {
+        test_qrcp(m_A, n_A, a_seed, true, false, 0);
     }
 };
 
 TEST_F(TestHQRRP, Dim10by3) 
 {
-   run(10, 3, 99);
-   run(10, 3, 100);
-   run(10, 3, 101);
+   run_rand_panel_piv(10, 3, 99);
+   run_rand_panel_piv(10, 3, 100);
+   run_rand_panel_piv(10, 3, 101);
 }
 
 TEST_F(TestHQRRP, Dim3by10) 
 {
-   run(3, 10, 99);
-   run(3, 10, 100);
-   run(3, 10, 101);
+   run_rand_panel_piv(3, 10, 99);
+   run_rand_panel_piv(3, 10, 100);
+   run_rand_panel_piv(3, 10, 101);
 }
 
 TEST_F(TestHQRRP, Dim10by10)
 {
-    run(10, 10, 99);
-    run(10, 10, 100);
-    run(10, 10, 101);
+    run_rand_panel_piv(10, 10, 99);
+    run_rand_panel_piv(10, 10, 100);
+    run_rand_panel_piv(10, 10, 101);
 }
 
 TEST_F(TestHQRRP, Dim300by100)
 {
-    run(300, 100, 99);
-    run(300, 100, 100);
-    run(300, 100, 101);
+    run_rand_panel_piv(300, 100, 99);
+    run_rand_panel_piv(300, 100, 100);
+    run_rand_panel_piv(300, 100, 101);
 }
 
 TEST_F(TestHQRRP, Dim100by300)
 {
-    run(100, 300, 99);
-    run(100, 300, 100);
-    run(100, 300, 101);
+    run_rand_panel_piv(100, 300, 99);
+    run_rand_panel_piv(100, 300, 100);
+    run_rand_panel_piv(100, 300, 101);
+}
+
+TEST_F(TestHQRRP, Dim10by3_no_panel)
+{
+    run_rand_no_panel_piv(10, 3, 99);
+    run_rand_no_panel_piv(10, 3, 100);
+    run_rand_no_panel_piv(10, 3, 101);
+}
+
+TEST_F(TestHQRRP, Dim3by10_no_panel)
+{
+    run_rand_no_panel_piv(3, 10, 99);
+    run_rand_no_panel_piv(3, 10, 100);
+    run_rand_no_panel_piv(3, 10, 101);
+}
+
+TEST_F(TestHQRRP, Dim10by10_no_panel)
+{
+    run_rand_no_panel_piv(10, 10, 99);
+    run_rand_no_panel_piv(10, 10, 100);
+    run_rand_no_panel_piv(10, 10, 101);
+}
+
+TEST_F(TestHQRRP, Dim300by100_no_panel)
+{
+    run_rand_no_panel_piv(300, 100, 99);
+    run_rand_no_panel_piv(300, 100, 100);
+    run_rand_no_panel_piv(300, 100, 101);
+}
+
+TEST_F(TestHQRRP, Dim100by300_no_panel)
+{
+    run_rand_no_panel_piv(100, 300, 99);
+    run_rand_no_panel_piv(100, 300, 100);
+    run_rand_no_panel_piv(100, 300, 101);
 }

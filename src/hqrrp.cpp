@@ -55,7 +55,7 @@ namespace HQRRP {
 
 // Matrices with dimensions larger than THRESHOLD_FOR_DGEQP3 are processed 
 // with the new HQRRP code.
-#define THRESHOLD_FOR_DGEQP3  3
+#define THRESHOLD_FOR_DGEQP3  2
 
 // ============================================================================
 // Definition of macros.
@@ -159,6 +159,7 @@ void _LAPACK_dgeqrf(
   lapack_int *info_ = (lapack_int *) info;
   LAPACK_dgeqrf(&m_, &n_, A, &lda_, tau, work, lwork_, info_);
   *info = (int64_t) *info_;
+  *lwork = (int64_t) *lwork_;
   return;
 }
 
@@ -271,7 +272,7 @@ void _LAPACK_dlarf(
 
 // ============================================================================
 void dgeqpr( int64_t * m, int64_t * n, double * A, int64_t * lda, int64_t * jpvt, double * tau,
-        double * work, int64_t * lwork, int64_t * info ) {
+        double * work, int64_t * lwork, int64_t * info, int64_t panel ) {
 // 
 // This routine is plug compatible with LAPACK's routine dgeqp3.
 // It computes the new HQRRP while keeping the same header as LAPACK's dgeqp3.
@@ -439,7 +440,7 @@ void dgeqpr( int64_t * m, int64_t * n, double * A, int64_t * lda, int64_t * jpvt
             ldim_A,
         & jpvt[ num_factorized_fixed_cols ], 
         & tau[ num_factorized_fixed_cols ],
-        64, 10, 1 );
+        16, 16, panel );
   }
 
   // Pivot block above factorized block by NoFLA_HQRRP.
@@ -478,7 +479,7 @@ void dgeqpr( int64_t * m, int64_t * n, double * A, int64_t * lda, int64_t * jpvt
 }
 
 
-void dgeqpr(int64_t m, int64_t n, double *A, int64_t lda, int64_t *jpvt, double *tau)
+void dgeqpr(int64_t m, int64_t n, double *A, int64_t lda, int64_t *jpvt, double *tau, int64_t panel = 1)
 {
   // This function is compatible with LAPACK++'s geqp3, provided the matrix A is 
   // double precision.
@@ -486,14 +487,14 @@ void dgeqpr(int64_t m, int64_t n, double *A, int64_t lda, int64_t *jpvt, double 
   int64_t lwork = -1;
   double *buff_wk_qp4 = (double *) malloc( sizeof( double ) );
   dgeqpr( & m, & n, A, & lda, jpvt, tau, 
-          buff_wk_qp4, & lwork, &info );
+          buff_wk_qp4, & lwork, &info, panel);
   if (info != 0) throw lapack::Error();
 
   lwork = (int64_t) *buff_wk_qp4;
   free(buff_wk_qp4);
   buff_wk_qp4 = ( double * ) malloc( lwork * sizeof( double ) );
   dgeqpr( & m, & n, A, & lda, jpvt, tau, 
-          buff_wk_qp4, & lwork, &info );
+          buff_wk_qp4, & lwork, &info, panel);
   if (info != 0) throw lapack::Error();
   
   free(buff_wk_qp4);
@@ -540,7 +541,7 @@ int64_t hqrrp( int64_t m_A, int64_t n_A, double * buff_A, int64_t ldim_A,
 // commented calls to libflame routines. We have left them to make it easier
 // to interpret the meaning of the C code.
 //
-  int64_t     b, j, last_iter, mn_A, m_Y, n_Y, ldim_Y, m_V, n_V, ldim_V, 
+  int64_t b, j, last_iter, mn_A, m_Y, n_Y, ldim_Y, m_V, n_V, ldim_V, 
           m_W, n_W, ldim_W, n_VR, m_AB1, n_AB1, ldim_T1_T,
           m_A11, n_A11, m_A12, n_A12, m_A21, n_A21, m_A22,
           m_G, n_G, ldim_G;
@@ -690,9 +691,19 @@ int64_t hqrrp( int64_t m_A, int64_t n_A, double * buff_A, int64_t ldim_A,
     free( buff_cyr );
 #endif
 
-    if( last_iter == 0 ) {
+    if( ! last_iter ) {
+      //
       // Compute QRP of YR, and apply permutations to matrix AR.
       // A copy of YR is made into VR, and permutations are applied to YR.
+      //
+      //    Notes
+      //    -----
+      //    The "NoFLA" function below is basically running GEQP3 on the updated sketch.
+      //
+      //    I only see one reason for doing this with a custom function instead of GEQP3 itself.
+      //    Specifically, this custom function operates on three matrices (VR, AR, and YR) in
+      //    sync with one another, while GEQP3 only operates on one matrix.
+      //
       lapack::lacpy( lapack::MatrixType::General,
                      m_V, n_VR,
                      buff_YR, ldim_Y,
@@ -703,14 +714,27 @@ int64_t hqrrp( int64_t m_A, int64_t n_A, double * buff_A, int64_t ldim_A,
           buff_pB, buff_sB,
           1, m_A, buff_AR, ldim_A,
           1, m_Y, buff_YR, ldim_Y,
-          0, buff_Y, ldim_Y );
+          0, nullptr, 0 
+      );
     }
 
     //
     // Compute QRP of panel AB1 = [ A11; A21 ].
     // Apply same permutations to A01 and Y1, and build T1_T.
     //
-
+    //    Notes
+    //    -----
+    //    The function below basically runs GEQP3 *or* GEQRF on
+    //    the updated sketch *and then* changes the representation of the
+    //    composition of Householder reflectors.
+    //
+    //    In the code path where we hit a GEQP3-like function we can't use
+    //    GEQP3 directly because we actually need to modify three matrices
+    //    (AB1, A01, and Y1) alongside one another.
+    //    
+    //    The code path where we hit a GEQRF-like function is very different;
+    //    it only operates on AB1!
+    //
     NoFLA_QRPmod_WY_unb_var4( panel_pivoting, -1,
         m_AB1, n_AB1, buff_AB1, ldim_A, buff_p1, buff_s1,
         1, j, buff_A01, ldim_A,
@@ -958,6 +982,44 @@ static int64_t NoFLA_Apply_Q_WY_rnfc_blk_var4(
   return 0;
 }
 
+// ==========================================================================
+static int64_t GEQRF_mod_WY(
+        int64_t num_stages,
+	      int64_t m_A, int64_t n_A, double * buff_A, int64_t ldim_A,
+	      double * buff_t,
+        double * buff_T, int64_t ldim_T
+) {
+//
+// Simplification of NoFLA_QRPmod_WY_unb_var4 for the case when pivoting=0.
+//
+
+  // Some initializations.
+  if( num_stages < 0 )
+    num_stages = min( m_A, n_A );;
+  
+  // run unpivoted Householder QR on buff_A.
+  int64_t info[1];
+  double work_query[1];
+  int64_t lwork[1];
+  lwork[0] = -1;
+  _LAPACK_dgeqrf(m_A, n_A, buff_A, ldim_A, buff_t, work_query, lwork, info);
+  lwork[0] = max((int64_t) blas::real(work_query[0]), n_A);
+  double *buff_workspace = ( double * ) malloc( lwork[0] * sizeof( double ) );
+  _LAPACK_dgeqrf(m_A, n_A, buff_A, ldim_A, buff_t, buff_workspace, lwork, info);
+
+  // Build T.
+  lapack::larft( lapack::Direction::Forward,
+                  lapack::StoreV::Columnwise,
+                  m_A, num_stages, buff_A, ldim_A, 
+                  buff_t, buff_T, ldim_T
+  );
+
+  // Remove auxiliary vectors.
+  free( buff_workspace );
+
+  return 0;
+}
+
 // ============================================================================
 static int64_t NoFLA_QRPmod_WY_unb_var4( int64_t pivoting, int64_t num_stages, 
                int64_t m_A, int64_t n_A, double * buff_A, int64_t ldim_A,
@@ -971,15 +1033,29 @@ static int64_t NoFLA_QRPmod_WY_unb_var4( int64_t pivoting, int64_t num_stages,
 // optionally built.
 //
 // Arguments:
+//
 // "pivoting": If pivoting==1, then QR factorization with pivoting is used.
+//
 // "numstages": It tells the number of columns that are factorized.
 //   If "num_stages" is negative, the whole matrix A is factorized.
 //   If "num_stages" is positive, only the first "num_stages" are factorized.
-// "pivot_B": if "pivot_B" is true, matrix "B" is pivoted too.
-// "pivot_C": if "pivot_C" is true, matrix "C" is pivoted too.
-// "build_T": if "build_T" is true, matrix "T" is built.
+//   The typical use-case for this function is to call with num_stages=-1.
+//   Calling with num_stages > 0 only happens at HQRRP's last iteration.
 //
-  int64_t     j, mn_A, m_a21, m_A22, n_A22, n_dB, idx_max_col, 
+// "pivot_B": if "pivot_B" is true, matrix "B" is pivoted too.
+//
+// "pivot_C": if "pivot_C" is true, matrix "C" is pivoted too.
+//
+// "build_T": if "build_T" is true, matrix "T" is built.
+//    The typical use-case for this function is to call with build_T=true.
+//    Calling with build_T=false is only done at HQRRP's last iteration.
+//
+
+  if (pivoting == 0) {
+    return GEQRF_mod_WY(num_stages, m_A, n_A, buff_A, ldim_A, buff_t, buff_T, ldim_T);
+  }
+
+  int64_t j, mn_A, m_a21, m_A22, n_A22, n_dB, idx_max_col, 
           i_one = 1, n_house_vector, m_rest;
   double  * buff_d, * buff_e, * buff_workspace, diag;
 
@@ -998,10 +1074,8 @@ static int64_t NoFLA_QRPmod_WY_unb_var4( int64_t pivoting, int64_t num_stages,
   buff_e         = ( double * ) malloc( n_A * sizeof( double ) );
   buff_workspace = ( double * ) malloc( n_A * sizeof( double ) );
 
-  if( pivoting == 1 ) {
-    // Compute initial norms of A int64_to d and e.
-    NoFLA_QRP_compute_norms( m_A, n_A, buff_A, ldim_A, buff_d, buff_e );
-  }
+  // Compute initial norms of A int64_to d and e.
+  NoFLA_QRP_compute_norms( m_A, n_A, buff_A, ldim_A, buff_d, buff_e );
 
   // Main Loop.
   for( j = 0; j < num_stages; j++ ) {
@@ -1010,19 +1084,17 @@ static int64_t NoFLA_QRPmod_WY_unb_var4( int64_t pivoting, int64_t num_stages,
     m_A22 = m_A - j - 1;
     n_A22 = n_A - j - 1;
 
-    if( pivoting == 1 ) {
-      // Obtain the index of the column with largest 2-norm.
-      idx_max_col = blas::iamax( n_dB, & buff_d[ j ], i_one ); // - 1;
+    // Obtain the index of the column with largest 2-norm.
+    idx_max_col = blas::iamax( n_dB, & buff_d[ j ], i_one ); // - 1;
 
-      // Swap columns of A, B, C, pivots, and norms vectors.
-      NoFLA_QRP_pivot_G_B_C( idx_max_col,
-          m_A, & buff_A[ 0 + j * ldim_A ], ldim_A,
-          pivot_B, m_B, & buff_B[ 0 + j * ldim_B ], ldim_B,
-          pivot_C, m_C, & buff_C[ 0 + j * ldim_C ], ldim_C,
-          & buff_p[ j ],
-          & buff_d[ j ],
-          & buff_e[ j ] );
-    }
+    // Swap columns of A, B, C, pivots, and norms vectors.
+    NoFLA_QRP_pivot_G_B_C( idx_max_col,
+        m_A, & buff_A[ 0 + j * ldim_A ], ldim_A,
+        pivot_B, m_B, & buff_B[ 0 + j * ldim_B ], ldim_B,
+        pivot_C, m_C, & buff_C[ 0 + j * ldim_C ], ldim_C,
+        & buff_p[ j ],
+        & buff_d[ j ],
+        & buff_e[ j ] );
 
     // Compute tau1 and u21 from alpha11 and a21 such that tau1 and u21
     // determine a Householder transform H such that applying H from the
@@ -1051,14 +1123,13 @@ static int64_t NoFLA_QRPmod_WY_unb_var4( int64_t pivoting, int64_t num_stages,
     );
     buff_A[ j + j * ldim_A ] = diag;
 
-    if( pivoting == 1 ) {
-      // Update partial column norms.
-      NoFLA_QRP_downdate_partial_norms( m_A22, n_A22, 
-          & buff_d[ j+1 ], 1,
-          & buff_e[ j+1 ], 1,
-          & buff_A[ j + ( j+1 ) * ldim_A ], ldim_A,
-          & buff_A[ ( j+1 ) + min( n_A-1, ( j+1 ) ) * ldim_A ], ldim_A );
-    }
+    // Update partial column norms.
+    NoFLA_QRP_downdate_partial_norms( m_A22, n_A22, 
+        & buff_d[ j+1 ], 1,
+        & buff_e[ j+1 ], 1,
+        & buff_A[ j + ( j+1 ) * ldim_A ], ldim_A,
+        & buff_A[ ( j+1 ) + min( n_A-1, ( j+1 ) ) * ldim_A ], ldim_A );
+
   }
 
   // Build T.
