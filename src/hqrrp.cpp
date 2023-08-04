@@ -968,64 +968,27 @@ static int64_t GEQRF_QRmod_WY_unb_var4( int64_t num_stages,
 // Simplification of NoFLA_QRPmod_WY_unb_var4 for the case when pivoting=0.
 // (I don't know what the "var4" signifies in that function name ...).
 //
-  int64_t j, mn_A, m_a21, m_A22, n_A22,
-          n_house_vector, m_rest, * info;
-  int64_t i_neg_one = -1;
-  double  * buff_workspace, diag;
 
   // Some initializations.
-  mn_A    = min( m_A, n_A );
   if( num_stages < 0 )
-    num_stages = mn_A;
+    num_stages = min( m_A, n_A );;
   
+  int64_t info[1];
   double work_query[1];
   int64_t lwork[1];
   lwork[0] = -1;
   _LAPACK_dgeqrf(m_A, n_A, buff_A, ldim_A, buff_t, work_query, lwork, info);
   lwork[0] = max((int64_t) blas::real(work_query[0]), n_A);
-  buff_workspace = ( double * ) malloc( lwork[0] * sizeof( double ) );
+  double *buff_workspace = ( double * ) malloc( lwork[0] * sizeof( double ) );
   _LAPACK_dgeqrf(m_A, n_A, buff_A, ldim_A, buff_t, buff_workspace, lwork, info);
-
-  // // Main Loop.
-  // for( j = 0; j < num_stages; j++ ) {
-  //   m_a21 = m_A - j - 1;
-  //   m_A22 = m_A - j - 1;
-  //   n_A22 = n_A - j - 1;
-
-  //   // Compute tau1 and u21 from alpha11 and a21 such that tau1 and u21
-  //   // determine a Householder transform H such that applying H from the
-  //   // left to the column vector consisting of alpha11 and a21 annihilates
-  //   // the entries in a21 (and updates alpha11).
-  //   n_house_vector = m_a21 + 1;
-  //   lapack::larfg(n_house_vector,
-  //       & buff_A[ j + j * ldim_A ],
-  //       & buff_A[ min( m_A-1, j+1 ) + j * ldim_A ],
-  //       1,
-  //       & buff_t[j]
-  //   );
-
-  //   // / a12t \ =  H / a12t \
-  //   // \ A22  /      \ A22  /
-  //   //
-  //   // where H is formed from tau1 and u21.
-  //   diag = buff_A[ j + j * ldim_A ];
-  //   buff_A[ j + j * ldim_A ] = 1.0;
-  //   m_rest = m_A22 + 1;
-  //   _LAPACK_dlarf( lapack::Side::Left, m_rest, n_A22, 
-  //       & buff_A[ j + j * ldim_A ], 1,
-  //       buff_t[ j ],
-  //       & buff_A[ j + ( j+1 ) * ldim_A ], ldim_A,
-  //       buff_workspace
-  //   );
-  //   buff_A[ j + j * ldim_A ] = diag;
-  // }
 
   // Build T.
   if( build_T ) {
     lapack::larft( lapack::Direction::Forward,
-                  lapack::StoreV::Columnwise,
-                  m_A, num_stages, buff_A, ldim_A, 
-                  buff_t, buff_T, ldim_T);
+                   lapack::StoreV::Columnwise,
+                   m_A, num_stages, buff_A, ldim_A, 
+                   buff_t, buff_T, ldim_T
+    );
   }
   // Remove auxiliary vectors.
   free( buff_workspace );
