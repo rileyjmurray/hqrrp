@@ -724,12 +724,12 @@ int64_t hqrrp( int64_t m_A, int64_t n_A, double * buff_A, int64_t ldim_A,
     //
     //    Notes
     //    -----
-    //    The function below is basically running GEQP3 *or* GEQRF on
-    //    the updated sketch *and then* changing the representation of the
+    //    The function below basically runs GEQP3 *or* GEQRF on
+    //    the updated sketch *and then* changes the representation of the
     //    composition of Householder reflectors.
     //
     //    In the code path where we hit a GEQP3-like function we can't use
-    //    GEQP3 directlybecause we actually need to modify three matrices
+    //    GEQP3 directly because we actually need to modify three matrices
     //    (AB1, A01, and Y1) alongside one another.
     //    
     //    The code path where we hit a GEQRF-like function is very different;
@@ -983,19 +983,21 @@ static int64_t NoFLA_Apply_Q_WY_rnfc_blk_var4(
 }
 
 // ==========================================================================
-static int64_t GEQRF_QRmod_WY_unb_var4( int64_t num_stages,
-	       int64_t m_A, int64_t n_A, double * buff_A, int64_t ldim_A,
-	       double * buff_t,
-	       int64_t build_T, double * buff_T, int64_t ldim_T ) {
+static int64_t GEQRF_mod_WY(
+        int64_t num_stages,
+	      int64_t m_A, int64_t n_A, double * buff_A, int64_t ldim_A,
+	      double * buff_t,
+        double * buff_T, int64_t ldim_T
+) {
 //
 // Simplification of NoFLA_QRPmod_WY_unb_var4 for the case when pivoting=0.
-// (I don't know what the "var4" signifies in that function name ...).
 //
 
   // Some initializations.
   if( num_stages < 0 )
     num_stages = min( m_A, n_A );;
   
+  // run unpivoted Householder QR on buff_A.
   int64_t info[1];
   double work_query[1];
   int64_t lwork[1];
@@ -1006,13 +1008,12 @@ static int64_t GEQRF_QRmod_WY_unb_var4( int64_t num_stages,
   _LAPACK_dgeqrf(m_A, n_A, buff_A, ldim_A, buff_t, buff_workspace, lwork, info);
 
   // Build T.
-  if( build_T ) {
-    lapack::larft( lapack::Direction::Forward,
-                   lapack::StoreV::Columnwise,
-                   m_A, num_stages, buff_A, ldim_A, 
-                   buff_t, buff_T, ldim_T
-    );
-  }
+  lapack::larft( lapack::Direction::Forward,
+                  lapack::StoreV::Columnwise,
+                  m_A, num_stages, buff_A, ldim_A, 
+                  buff_t, buff_T, ldim_T
+  );
+
   // Remove auxiliary vectors.
   free( buff_workspace );
 
@@ -1051,7 +1052,7 @@ static int64_t NoFLA_QRPmod_WY_unb_var4( int64_t pivoting, int64_t num_stages,
 //
 
   if (pivoting == 0) {
-    return GEQRF_QRmod_WY_unb_var4(num_stages, m_A, n_A, buff_A, ldim_A, buff_t, build_T, buff_T, ldim_T);
+    return GEQRF_mod_WY(num_stages, m_A, n_A, buff_A, ldim_A, buff_t, buff_T, ldim_T);
   }
 
   int64_t j, mn_A, m_a21, m_A22, n_A22, n_dB, idx_max_col, 
