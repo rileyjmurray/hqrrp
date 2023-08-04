@@ -541,7 +541,7 @@ int64_t hqrrp( int64_t m_A, int64_t n_A, double * buff_A, int64_t ldim_A,
 // commented calls to libflame routines. We have left them to make it easier
 // to interpret the meaning of the C code.
 //
-  int64_t     b, j, last_iter, mn_A, m_Y, n_Y, ldim_Y, m_V, n_V, ldim_V, 
+  int64_t b, j, last_iter, mn_A, m_Y, n_Y, ldim_Y, m_V, n_V, ldim_V, 
           m_W, n_W, ldim_W, n_VR, m_AB1, n_AB1, ldim_T1_T,
           m_A11, n_A11, m_A12, n_A12, m_A21, n_A21, m_A22,
           m_G, n_G, ldim_G;
@@ -691,9 +691,19 @@ int64_t hqrrp( int64_t m_A, int64_t n_A, double * buff_A, int64_t ldim_A,
     free( buff_cyr );
 #endif
 
-    if( last_iter == 0 ) {
+    if( ! last_iter ) {
+      //
       // Compute QRP of YR, and apply permutations to matrix AR.
       // A copy of YR is made into VR, and permutations are applied to YR.
+      //
+      //    Notes
+      //    -----
+      //    The "NoFLA" function below is basically running GEQP3 on the updated sketch.
+      //
+      //    I only see one reason for doing this with a custom function instead of GEQP3 itself.
+      //    Specifically, this custom function operates on three matrices (VR, AR, and YR) in
+      //    sync with one another, while GEQP3 only operates on one matrix.
+      //
       lapack::lacpy( lapack::MatrixType::General,
                      m_V, n_VR,
                      buff_YR, ldim_Y,
@@ -704,14 +714,27 @@ int64_t hqrrp( int64_t m_A, int64_t n_A, double * buff_A, int64_t ldim_A,
           buff_pB, buff_sB,
           1, m_A, buff_AR, ldim_A,
           1, m_Y, buff_YR, ldim_Y,
-          0, buff_Y, ldim_Y );
+          0, nullptr, 0 
+      );
     }
 
     //
     // Compute QRP of panel AB1 = [ A11; A21 ].
     // Apply same permutations to A01 and Y1, and build T1_T.
     //
-
+    //    Notes
+    //    -----
+    //    The function below is basically running GEQP3 *or* GEQRF on
+    //    the updated sketch *and then* changing the representation of the
+    //    composition of Householder reflectors.
+    //
+    //    In the code path where we hit a GEQP3-like function we can't use
+    //    GEQP3 directlybecause we actually need to modify three matrices
+    //    (AB1, A01, and Y1) alongside one another.
+    //    
+    //    The code path where we hit a GEQRF-like function is very different;
+    //    it only operates on AB1!
+    //
     NoFLA_QRPmod_WY_unb_var4( panel_pivoting, -1,
         m_AB1, n_AB1, buff_AB1, ldim_A, buff_p1, buff_s1,
         1, j, buff_A01, ldim_A,
